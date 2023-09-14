@@ -13,9 +13,8 @@ public class Client {
             String ip = args[1];
             int port = Integer.parseInt(args[2]);
             new client.Client(username, ip, port).start();
-        } catch (LoginException e) {
-            System.err.println(e.getMessage());
         } catch (Exception e) {
+            System.err.println(e.getMessage());
             System.err.println("Usage: java -jar client.jar <username> <ip> <port>");
         }
     }
