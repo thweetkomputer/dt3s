@@ -1,5 +1,7 @@
 package cmd;
 
+import exception.LoginException;
+
 /**
  * command line client starter.
  */
@@ -10,7 +12,9 @@ public class Client {
             String username = args[0];
             String ip = args[1];
             int port = Integer.parseInt(args[2]);
-//            new client.Client(username, ip, port).start();
+            new client.Client(username, ip, port).start();
+        } catch (LoginException e) {
+            System.err.println(e.getMessage());
         } catch (Exception e) {
             System.err.println("Usage: java -jar client.jar <username> <ip> <port>");
         }
