@@ -14,6 +14,7 @@ public class LoginImpl extends UnicastRemoteObject implements rmi.LoginInterface
 
     /**
      * the constructor.
+     *
      * @throws RemoteException the remote exception.
      */
     public LoginImpl() throws RemoteException {
@@ -22,6 +23,7 @@ public class LoginImpl extends UnicastRemoteObject implements rmi.LoginInterface
 
     /**
      * login.
+     *
      * @param username the username.
      * @return the information, "OK" if success, others if failed.
      * @throws RemoteException the remote exception.
@@ -34,5 +36,16 @@ public class LoginImpl extends UnicastRemoteObject implements rmi.LoginInterface
         Player player = new Player(username, players.size() + 1);
         players.put(username, player);
         return "OK";
+    }
+
+    /**
+     * logout.
+     *
+     * @param username the username.
+     * @throws RemoteException the remote exception.
+     */
+    @Override
+    public void Logout(String username) throws RemoteException {
+        players.remove(username);
     }
 }

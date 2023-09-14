@@ -14,4 +14,11 @@ public interface LoginInterface extends Remote {
      * @throws RemoteException the remote exception.
      */
     String Login(String username) throws RemoteException;
+
+    /**
+     * logout
+     * @param username the username.
+     * @throws RemoteException the remote exception.
+     */
+    void Logout(String username) throws RemoteException;
 }
