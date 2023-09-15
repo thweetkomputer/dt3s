@@ -1,14 +1,15 @@
 package client;
 
-import exception.LoginException;
-import lombok.AllArgsConstructor;
-import rmi.LoginInterface;
+import client.rmi.ChatCallBackImpl;
+import client.rmi.ChatCallBackInterface;
+import server.rmi.ChatInterface;
+import server.rmi.GameInterface;
+import server.rmi.LoginInterface;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.rmi.RemoteException;
 
 /**
  * the client class, contains GUI.
@@ -26,18 +27,27 @@ public class Client {
 
     public void start() {
         LoginInterface loginInterface;
+        ChatInterface chatInterface;
+        GameInterface gameInterface;
+        System.out.println("Connecting to server...");
         try {
             loginInterface = (LoginInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/login");
+            gameInterface = (GameInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/game");
+            chatInterface = (ChatInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/chat");
+            ChatCallBackInterface chatCallBackInterface = new ChatCallBackImpl();
+            chatInterface.register(chatCallBackInterface);
             String result = loginInterface.Login(username);
             // if login failed, print the reason and return.
             if (!result.equals("OK")) {
                 System.out.println(result);
                 return;
             }
+            System.out.println("Login success.");
         } catch (Exception e) {
-            System.err.println(e.getMessage());
+            System.err.println("Client exception: " + e);
             return;
         }
+
         SwingUtilities.invokeLater(this::createAndShowGUI);
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
@@ -70,11 +80,7 @@ public class Client {
 
             public void actionPerformed(ActionEvent evt) {
                 dotCount++;
-                StringBuilder sb = new StringBuilder("Finding Player");
-                for (int i = 0; i < dotCount; i++) {
-                    sb.append(".");
-                }
-                label.setText(sb.toString());
+                label.setText("Finding Player" + ".".repeat(Math.max(0, dotCount)));
 
                 // Reset dotCount if it reaches 3
                 if (dotCount >= 3) {
@@ -86,5 +92,7 @@ public class Client {
         new Timer(delay, taskPerformer).start();
 
         frame.setVisible(true);
+
+
     }
 }

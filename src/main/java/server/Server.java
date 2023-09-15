@@ -1,8 +1,12 @@
 package server;
 
 import lombok.AllArgsConstructor;
+import server.rmi.*;
 
+import java.net.MalformedURLException;
 import java.rmi.Naming;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 
 /**
@@ -15,13 +19,24 @@ public class Server {
 
     public void start() {
         try {
-            LocateRegistry.createRegistry(port);
-            LoginImpl login = new LoginImpl();
-            Naming.rebind("rmi://" + ip + ":" + port + "/login", login);
+            startRegistry();
+            registerService(new LoginImpl(), "login");
+            registerService(new GameImpl(), "game");
+            registerService(new ChatImpl(), "chat");
         } catch (Exception e) {
-            System.err.println("Server exception: " + e.toString());
+            System.err.println("Server exception: " + e);
             return;
         }
         System.out.println("Server started.");
+    }
+
+    private void startRegistry() throws RemoteException {
+        LocateRegistry.createRegistry(port);
+    }
+
+    private void registerService(Remote service, String serviceName) throws RemoteException, MalformedURLException {
+        String url = String.format("rmi://%s:%d/%s", ip, port, serviceName);
+        Naming.rebind(url, service);
+        System.out.println("Service " + serviceName + " bound to " + url);
     }
 }

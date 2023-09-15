@@ -1,6 +1,7 @@
-package server;
+package server.rmi;
 
 import common.Player;
+import server.rmi.LoginInterface;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -9,7 +10,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * the login implementation.
  */
-public class LoginImpl extends UnicastRemoteObject implements rmi.LoginInterface {
+public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
     private final ConcurrentHashMap<String, Player> players = new ConcurrentHashMap<>();
 
     /**

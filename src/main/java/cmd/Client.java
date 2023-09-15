@@ -1,6 +1,5 @@
 package cmd;
 
-import exception.LoginException;
 
 /**
  * command line client starter.

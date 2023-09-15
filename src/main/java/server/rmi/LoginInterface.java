@@ -1,4 +1,4 @@
-package rmi;
+package server.rmi;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -9,6 +9,7 @@ import java.rmi.RemoteException;
 public interface LoginInterface extends Remote {
     /**
      * login.
+     *
      * @param username the username.
      * @return the information, "OK" if success, others if failed.
      * @throws RemoteException the remote exception.
@@ -17,6 +18,7 @@ public interface LoginInterface extends Remote {
 
     /**
      * logout
+     *
      * @param username the username.
      * @throws RemoteException the remote exception.
      */
