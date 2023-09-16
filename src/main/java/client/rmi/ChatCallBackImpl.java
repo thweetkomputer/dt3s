@@ -1,6 +1,7 @@
 package client.rmi;
 
 import java.rmi.server.UnicastRemoteObject;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * the chat callback implementation.

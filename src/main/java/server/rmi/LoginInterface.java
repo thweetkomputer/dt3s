@@ -1,5 +1,8 @@
 package server.rmi;
 
+import client.rmi.ChatCallBackInterface;
+import client.rmi.GameCallBackInterface;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
@@ -14,7 +17,9 @@ public interface LoginInterface extends Remote {
      * @return the information, "OK" if success, others if failed.
      * @throws RemoteException the remote exception.
      */
-    String Login(String username) throws RemoteException;
+    String Login(String username,
+                 GameCallBackInterface gameClient,
+                 ChatCallBackInterface chatClient) throws RemoteException;
 
     /**
      * logout

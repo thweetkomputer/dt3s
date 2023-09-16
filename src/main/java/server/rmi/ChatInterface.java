@@ -18,8 +18,4 @@ public interface ChatInterface extends Remote {
      * @throws RemoteException the remote exception.
      */
     void sendMessage(String username, String message) throws RemoteException;
-
-    void register(ChatCallBackInterface client) throws RemoteException;
-
-    void unregister(ChatCallBackInterface client) throws RemoteException;
 }

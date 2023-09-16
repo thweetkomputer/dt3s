@@ -1,21 +1,32 @@
 package server.rmi;
 
 import client.rmi.ChatCallBackInterface;
-import server.rmi.ChatInterface;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * the chat implementation.
  */
 public class ChatImpl extends UnicastRemoteObject implements ChatInterface {
 
+    private ConcurrentHashMap<String, ChatCallBackInterface> clients;
+
     /**
      * the constructor.
      */
     public ChatImpl() throws RemoteException {
         super();
+    }
+
+    /**
+     * the constructor.
+     */
+    public ChatImpl(ConcurrentHashMap<String, ChatCallBackInterface> clients) throws RemoteException {
+        super();
+        this.clients = clients;
     }
 
     /**
@@ -28,28 +39,5 @@ public class ChatImpl extends UnicastRemoteObject implements ChatInterface {
     @Override
     public void sendMessage(String username, String message) throws RemoteException {
         System.out.println(username + ": " + message);
-    }
-
-    /**
-     * register.
-     *
-     * @param client the client.
-     * @throws RemoteException the remote exception.
-     */
-    @Override
-    public void register(ChatCallBackInterface client) throws RemoteException {
-        System.out.println("register " + client);
-        client.sendMessage("Server", "Welcome to the chat room!");
-    }
-
-    /**
-     * unregister.
-     *
-     * @param client the client.
-     * @throws RemoteException the remote exception.
-     */
-    @Override
-    public void unregister(ChatCallBackInterface client) throws RemoteException {
-        System.out.println("unregister " + client);
     }
 }

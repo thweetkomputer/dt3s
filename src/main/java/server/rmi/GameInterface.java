@@ -1,5 +1,7 @@
 package server.rmi;
 
+import client.rmi.GameCallBackInterface;
+
 import java.rmi.Remote;
 
 /**
