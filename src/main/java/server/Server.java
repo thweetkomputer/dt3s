@@ -1,7 +1,5 @@
 package server;
 
-import client.rmi.ChatCallBackImpl;
-import client.rmi.ChatCallBackInterface;
 import client.rmi.GameCallBackInterface;
 import common.Player;
 import lombok.AllArgsConstructor;
@@ -32,19 +30,16 @@ public class Server {
         ConcurrentHashMap<String, Player> players = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, Player> freePlayers = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, Player> playingPlayers = new ConcurrentHashMap<>();
-        ConcurrentHashMap<String, ChatCallBackInterface> chatClients = new ConcurrentHashMap<>();
         ConcurrentHashMap<String, GameCallBackInterface> gameClients = new ConcurrentHashMap<>();
         Lock lock = new ReentrantLock();
         Condition condition = lock.newCondition();
         try {
             startRegistry();
             registerService(
-                    new LoginImpl(players, freePlayers, playingPlayers, gameClients, chatClients, lock, condition),
+                    new LoginImpl(players, freePlayers, playingPlayers, gameClients, lock, condition),
                     "login");
             GameImpl gameService = new GameImpl(freePlayers, playingPlayers, gameClients, lock, condition);
             registerService(gameService, "game");
-            ChatImpl chatService = new ChatImpl(chatClients);
-            registerService(chatService, "chat");
             gameService.Start();
         } catch (Exception e) {
             System.err.println("Server exception: " + e);

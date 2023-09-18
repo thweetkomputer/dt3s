@@ -1,12 +1,8 @@
 package client;
 
-import client.rmi.ChatCallBackImpl;
-import client.rmi.ChatCallBackInterface;
 import client.rmi.GameCallBackImpl;
 import client.rmi.GameCallBackInterface;
 import common.PlaceholderTextField;
-import lombok.NoArgsConstructor;
-import server.rmi.ChatInterface;
 import server.rmi.GameInterface;
 import server.rmi.LoginInterface;
 
@@ -18,6 +14,10 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
+
+import static java.lang.System.exit;
 
 /**
  * the client class, contains GUI.
@@ -28,6 +28,25 @@ public class Client {
     private final int port;
     private AtomicLong lastMessageTime = new AtomicLong(0);
 
+    private ReadWriteLock mu = new ReentrantReadWriteLock();
+    private JLabel turnLabel = new JLabel();
+
+    private JButton[] boards = new JButton[9];
+
+    {
+        for (int i = 0; i < boards.length; i++) {
+            boards[i] = new JButton();
+            boards[i].setCursor(new Cursor(Cursor.HAND_CURSOR));
+        }
+    }
+
+    /**
+     * Instantiates a new Client.
+     *
+     * @param username the username.
+     * @param ip       the ip.
+     * @param port     the port.
+     */
     public Client(String username, String ip, int port) {
         this.username = username;
         this.ip = ip;
@@ -35,40 +54,55 @@ public class Client {
     }
 
     public void start() {
-        LoginInterface loginInterface = null;
-        ChatInterface chatInterface;
-        GameInterface gameInterface;
+        LoginInterface loginService = null;
+        GameInterface gameService;
+        mu.writeLock().lock();
+        createAndShowGUI();
+        mu.writeLock().unlock();
+        System.out.println("UI created.");
         System.out.println("Connecting to server...");
         try {
-            loginInterface = (LoginInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/login");
-            gameInterface = (GameInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/game");
-            chatInterface = (ChatInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/chat");
-            GameCallBackInterface gameCallBackInterface = new GameCallBackImpl(lastMessageTime);
-            ChatCallBackInterface chatCallBackInterface = new ChatCallBackImpl();
-            String result = loginInterface.Login(username, gameCallBackInterface, chatCallBackInterface);
+            loginService = (LoginInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/login");
+            gameService = (GameInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/game");
+
+            // bind click
+            for (int i = 0; i < 9; ++i) {
+                var button = boards[i];
+                int finalI = i;
+                button.addActionListener(e -> {
+                    try {
+                        System.out.println("click " + finalI);
+                        gameService.makeMove(username, finalI / 3, finalI % 3);
+                    } catch (Exception exception) {
+                        exception.printStackTrace();
+                    }
+                });
+            }
+
+            GameCallBackInterface gameCallBackInterface = new GameCallBackImpl(mu, lastMessageTime, boards, turnLabel);
+            String result = loginService.Login(username, gameCallBackInterface);
             // if login failed, print the reason and return.
             if (!result.equals("OK")) {
                 System.out.println(result);
-                return;
+                exit(0);
             }
             System.err.println("Login success.");
         } catch (Exception e) {
             e.printStackTrace();
             System.err.println("Client exception: " + e);
-            if (loginInterface != null) {
+            if (loginService != null) {
                 try {
-                    loginInterface.Logout(username);
+                    loginService.Logout(username);
                 } catch (Exception ignored) {
                 }
             }
             return;
         }
 
-        SwingUtilities.invokeLater(this::createAndShowGUI);
-        LoginInterface finalLoginInterface = loginInterface;
+        LoginInterface finalLoginService = loginService;
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                finalLoginInterface.Logout(username);
+                finalLoginService.Logout(username);
             } catch (Exception ignored) {
             }
         }));
@@ -83,54 +117,13 @@ public class Client {
         frame.setResizable(false);
         frame.setBackground(Color.WHITE);
         frame.getContentPane().setBackground(Color.WHITE);
-        findingPlayer(frame, 0);
+        startGame(frame, 0);
 
         frame.setVisible(true);
 
     }
 
-    private void findingPlayer(JFrame frame, long lastMessageTime) {
-        frame.getContentPane().removeAll();
-        frame.repaint();
-        frame.revalidate();
-        frame.setBackground(Color.WHITE);
-        frame.getContentPane().setBackground(Color.WHITE);
-        // Initialize JLabel and set the font
-        JLabel label = new JLabel("Finding Player");
-        label.setBackground(Color.WHITE);
-        label.setHorizontalAlignment(JLabel.CENTER);
-
-        // Set font style to bold, size to 24pt
-        label.setFont(new Font("Comic Sans MS", Font.BOLD, 24));
-
-        frame.add(label, BorderLayout.CENTER);
-
-        // Initialize counter and Timer
-        Timer timer;
-        int delay = 500;
-        ActionListener taskPerformer = new ActionListener() {
-            private int dotCount = 0;
-
-            public void actionPerformed(ActionEvent evt) {
-                dotCount++;
-                label.setText("Finding Player" + ".".repeat(Math.max(0, dotCount)));
-                // Reset dotCount if it reaches 3
-                if (dotCount >= 3) {
-                    dotCount = 0;
-                }
-                if (Client.this.lastMessageTime.get() != lastMessageTime) {
-                    System.err.println("Found player");
-                    ((Timer) (evt.getSource())).stop();
-                    startGame(frame);
-                }
-            }
-        };
-
-        timer = new Timer(delay, taskPerformer);
-        timer.start();
-    }
-
-    private void startGame(JFrame frame) {
+    private void startGame(JFrame frame, long lastMessageTime) {
         frame.getContentPane().removeAll();
         frame.repaint();
         frame.revalidate();
@@ -173,7 +166,7 @@ public class Client {
         quitButton.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
         quitButton.setBackground(Color.WHITE);
         quitButton.addActionListener(e -> {
-            System.exit(0);
+            exit(0);
         });
         quitButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
@@ -196,15 +189,45 @@ public class Client {
         boardPanel.setLayout(new GridLayout(3, 3));
         boardPanel.setBackground(Color.WHITE);
         boardWrapper.add(boardPanel, BorderLayout.CENTER);
-
-        JLabel turnLabel = new JLabel("Player 1's Turn");
+        turnLabel.setText("Finding Player");
         turnLabel.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
         turnLabel.setHorizontalAlignment(JLabel.CENTER);
         turnLabel.setBackground(Color.WHITE);
         turnLabel.setBounds(160, 40, 300, 40); // x, y, width, height
+        turnLabel.setBackground(Color.WHITE);
+        turnLabel.setHorizontalAlignment(JLabel.CENTER);
 
+        // Initialize counter and Timer
+        Timer timer;
+        int delay = 500;
+        ActionListener taskPerformer = new ActionListener() {
+            private int dotCount = 0;
+
+            public void actionPerformed(ActionEvent evt) {
+                mu.readLock().lock();
+                if (!turnLabel.getText().startsWith("Finding Player")) {
+                    ((Timer) (evt.getSource())).stop();
+                    mu.readLock().unlock();
+                    return;
+                }
+                mu.readLock().unlock();
+                dotCount++;
+                mu.writeLock().lock();
+                turnLabel.setText("Finding Player" + ".".repeat(Math.max(0, dotCount)));
+                // reset dotCount if it reaches 3
+                if (dotCount >= 3) {
+                    dotCount = 0;
+                }
+                mu.writeLock().unlock();
+            }
+        };
+
+        timer = new Timer(delay, taskPerformer);
+        timer.start();
+
+        // draw board
         for (int i = 0; i < 9; i++) {
-            JButton btn = new JButton();
+            var btn = boards[i];
             CompoundBorder compoundBorder = new CompoundBorder(
                     new LineBorder(Color.BLACK, 1),
                     new EmptyBorder(10, 10, 10, 10)

@@ -1,6 +1,7 @@
 package common;
 
 import lombok.Data;
+import server.rmi.GameInterface;
 
 /**
  * the player class, contains the information of a player.
@@ -11,6 +12,8 @@ public class Player {
     int rank;
     int score;
     long loginTime;
+
+    Game game;
 
     /**
      * the constructor.
@@ -24,5 +27,14 @@ public class Player {
         this.score = 0;
         this.rank = rank;
         this.loginTime = loginTime;
+    }
+
+    @Override
+    public String toString() {
+        if (username.length() > 10) {
+            return "Rank#" + rank + " " + username.substring(0, 7) + "...";
+        } else {
+            return "Rank#" + rank + " " + username;
+        }
     }
 }

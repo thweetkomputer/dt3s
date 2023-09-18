@@ -1,9 +1,7 @@
 package server.rmi;
 
-import client.rmi.ChatCallBackInterface;
 import client.rmi.GameCallBackInterface;
 import common.Player;
-import server.rmi.LoginInterface;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -25,7 +23,6 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
     private ConcurrentHashMap<String, Player> freePlayers;
     private ConcurrentHashMap<String, Player> playingPlayers;
     private ConcurrentHashMap<String, GameCallBackInterface> gameClients;
-    private ConcurrentHashMap<String, ChatCallBackInterface> chatClients;
     private Lock lock;
     private Condition condition;
 
@@ -45,7 +42,6 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
                      ConcurrentHashMap<String, Player> freePlayers,
                      ConcurrentHashMap<String, Player> playingPlayers,
                      ConcurrentHashMap<String, GameCallBackInterface> gameClients,
-                     ConcurrentHashMap<String, ChatCallBackInterface> chatClients,
                      Lock lock,
                      Condition condition) throws RemoteException {
         super();
@@ -53,7 +49,6 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
         this.freePlayers = freePlayers;
         this.playingPlayers = playingPlayers;
         this.gameClients = gameClients;
-        this.chatClients = chatClients;
         this.lock = lock;
         this.condition = condition;
     }
@@ -67,8 +62,7 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
      */
     @Override
     public String Login(String username,
-                        GameCallBackInterface gameClient,
-                        ChatCallBackInterface chatClient) throws RemoteException {
+                        GameCallBackInterface gameClient) throws RemoteException {
         lock.lock();
         if (players.containsKey(username)) {
             lock.unlock();
@@ -78,7 +72,6 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
         players.put(username, player);
         freePlayers.put(username, player);
         gameClients.put(username, gameClient);
-        chatClients.put(username, chatClient);
         LOGGER.info("Player " + username + " login.");
         LOGGER.info("Current free players: " + freePlayers.size() + ".");
         if (freePlayers.size() >= 2) {
