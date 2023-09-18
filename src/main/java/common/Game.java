@@ -69,7 +69,6 @@ public class Game {
             int rank = 1;
             for (var player : playerList) {
                 player.rank = rank++;
-                System.out.println(player + " " + player.getScore());
             }
             mu.unlock();
             clients[0].ask();
@@ -83,7 +82,7 @@ public class Game {
     }
 
     public String getTurnLabel() {
-        return players[turn].toString() + "'s turn (" + chess[turn] + ")";
+        return ranks[turn] + "'s turn (" + chess[turn] + ")";
     }
 
     /**
