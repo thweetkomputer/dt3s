@@ -31,7 +31,7 @@
                   <mainClass>cmd.Server</mainClass>
                 </transformer>
               </transformers>
-              <finalName>Server</finalName>
+              <finalName>server</finalName>
             </configuration>
           </execution>
           <execution>
@@ -46,7 +46,7 @@
                   <mainClass>cmd.Client</mainClass>
                 </transformer>
               </transformers>
-              <finalName>Client</finalName>
+              <finalName>client</finalName>
               <minimizeJar>true</minimizeJar>
             </configuration>
           </execution>
