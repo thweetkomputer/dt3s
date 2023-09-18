@@ -2,6 +2,7 @@ package client;
 
 import client.rmi.GameCallBackImpl;
 import client.rmi.GameCallBackInterface;
+import common.MemoryTextArea;
 import common.PlaceholderTextField;
 import server.rmi.GameInterface;
 import server.rmi.LoginInterface;
@@ -31,7 +32,7 @@ public class Client {
     private ReadWriteLock mu = new ReentrantReadWriteLock();
     private JLabel turnLabel = new JLabel();
 
-    private JTextArea chatTextArea = new JTextArea();
+    private JTextArea chatTextArea = new MemoryTextArea(10);
 
     private JButton[] boards = new JButton[9];
 
@@ -72,7 +73,7 @@ public class Client {
 
             // bind click
             for (int i = 0; i < 9; ++i) {
-                var button = boards[i];
+                JButton button = boards[i];
                 int finalI = i;
                 button.addActionListener(e -> {
                     try {
@@ -202,7 +203,7 @@ public class Client {
 
         // draw board
         for (int i = 0; i < 9; i++) {
-            var btn = boards[i];
+            JButton btn = boards[i];
             CompoundBorder compoundBorder = new CompoundBorder(
                     new LineBorder(Color.BLACK, 1),
                     new EmptyBorder(10, 10, 10, 10)
@@ -235,22 +236,24 @@ public class Client {
 
         // title label
         JLabel chatLabel = new JLabel("Player Chat");
-        chatLabel.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
+        chatLabel.setFont(new Font("Comic Sans MS", Font.PLAIN, 16));
         chatLabel.setHorizontalAlignment(JLabel.CENTER);
         chatLabel.setBorder(new LineBorder(Color.BLACK, 1));
         chatLabel.setBackground(Color.WHITE);
 
-        chatTextArea = new JTextArea();
         chatTextArea.setEditable(false);
-        chatTextArea.setFont(new Font("Comic Sans MS", Font.PLAIN, 14));
+        chatTextArea.setFont(new Font("Comic Sans MS", Font.PLAIN, 16));
+        chatTextArea.setLineWrap(true);
+        chatTextArea.setWrapStyleWord(true);
         // TODO: from bottom
 
         // scroll pane
         JScrollPane chatScrollPane = new JScrollPane(chatTextArea);
-        chatScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+        chatScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        chatScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
         JTextField chatInputField = new PlaceholderTextField("Type your message here...");
-        chatInputField.setFont(new Font("Comic Sans MS", Font.PLAIN, 14));
+        chatInputField.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
         chatInputField.setBorder(null);
         chatInputField.addActionListener(e -> {
             String message = chatInputField.getText();
@@ -265,7 +268,7 @@ public class Client {
             chatTextArea.setCaretPosition(chatTextArea.getDocument().getLength());
         });
 
-        Dimension dim = new Dimension(chatInputField.getPreferredSize().width, 30);
+        Dimension dim = new Dimension(chatInputField.getPreferredSize().width, 45);
         chatInputField.setPreferredSize(dim);
         chatInputField.setMinimumSize(dim);
         chatInputField.setMaximumSize(dim);

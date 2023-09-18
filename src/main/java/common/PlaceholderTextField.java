@@ -6,8 +6,6 @@ import java.awt.*;
 
 /**
  * A text field with placeholder.
- *
- * @author Chen Zhao
  */
 public class PlaceholderTextField extends JTextField {
 
@@ -32,7 +30,7 @@ public class PlaceholderTextField extends JTextField {
         super.paintComponent(g);
 
         if (getText().isEmpty() && placeholder != null) {
-            g.setFont(new Font("Comic Sans MS", Font.PLAIN, 14));
+            g.setFont(new Font("Comic Sans MS", Font.PLAIN, 16));
             g.setColor(Color.GRAY);
             FontMetrics fm = g.getFontMetrics();
             int baseline = (getHeight() - fm.getHeight()) / 2 + fm.getAscent();

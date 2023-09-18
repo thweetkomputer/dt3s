@@ -67,7 +67,7 @@ public class Game {
             playerList.add(players[0]);
             playerList.add(players[1]);
             int rank = 1;
-            for (var player : playerList) {
+            for (Player player : playerList) {
                 player.rank = rank++;
             }
             mu.unlock();

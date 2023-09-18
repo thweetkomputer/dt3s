@@ -142,7 +142,8 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
 
     }
 
-    public static void findingPlayer(int delay, ReadWriteLock mu, JLabel turnLabel, GameInterface service, String username) throws Exception {
+    public static void findingPlayer(int delay, ReadWriteLock mu, JLabel turnLabel, GameInterface service,
+                                     String username) throws Exception {
         mu.writeLock().lock();
         turnLabel.setText("Finding Player");
         mu.writeLock().unlock();
