@@ -88,7 +88,6 @@ public class Client {
             }
             System.err.println("Login success.");
         } catch (Exception e) {
-            e.printStackTrace();
             System.err.println("Client exception: " + e);
             if (loginService != null) {
                 try {
@@ -96,7 +95,7 @@ public class Client {
                 } catch (Exception ignored) {
                 }
             }
-            return;
+            exit(0);
         }
 
         LoginInterface finalLoginService = loginService;
@@ -267,14 +266,23 @@ public class Client {
 
         JTextArea chatTextArea = new JTextArea();
         chatTextArea.setEditable(false);
+        chatTextArea.setFont(new Font("Comic Sans MS", Font.PLAIN, 14));
 
         // scroll pane
         JScrollPane chatScrollPane = new JScrollPane(chatTextArea);
         chatScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
 
         JTextField chatInputField = new PlaceholderTextField("Type your message here...");
-        chatInputField.setFont(new Font("Comic Sans MS", Font.PLAIN, 16));
+        chatInputField.setFont(new Font("Comic Sans MS", Font.PLAIN, 14));
         chatInputField.setBorder(null);
+        chatInputField.addActionListener(e -> {
+            String message = chatInputField.getText();
+            if (!message.trim().isEmpty()) {
+                chatTextArea.append(username + ": " + message + "\n");
+                chatInputField.setText("");
+            }
+            chatTextArea.setCaretPosition(chatTextArea.getDocument().getLength());
+        });
 
         Dimension dim = new Dimension(chatInputField.getPreferredSize().width, 30);
         chatInputField.setPreferredSize(dim);
