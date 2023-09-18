@@ -28,8 +28,12 @@ public class Client {
     private final int port;
     private AtomicLong lastMessageTime = new AtomicLong(0);
 
+    LoginInterface loginService;
+    GameInterface gameService;
     private ReadWriteLock mu = new ReentrantReadWriteLock();
     private JLabel turnLabel = new JLabel();
+
+    private JTextArea chatTextArea = new JTextArea();
 
     private JButton[] boards = new JButton[9];
 
@@ -54,8 +58,6 @@ public class Client {
     }
 
     public void start() {
-        LoginInterface loginService = null;
-        GameInterface gameService;
         mu.writeLock().lock();
         createAndShowGUI();
         mu.writeLock().unlock();
@@ -79,7 +81,8 @@ public class Client {
                 });
             }
 
-            GameCallBackInterface gameCallBackInterface = new GameCallBackImpl(mu, lastMessageTime, boards, turnLabel);
+            GameCallBackInterface gameCallBackInterface = new GameCallBackImpl(mu, lastMessageTime, boards, turnLabel,
+                    chatTextArea);
             String result = loginService.Login(username, gameCallBackInterface);
             // if login failed, print the reason and return.
             if (!result.equals("OK")) {
@@ -264,7 +267,7 @@ public class Client {
         chatLabel.setBorder(new LineBorder(Color.BLACK, 1));
         chatLabel.setBackground(Color.WHITE);
 
-        JTextArea chatTextArea = new JTextArea();
+        chatTextArea = new JTextArea();
         chatTextArea.setEditable(false);
         chatTextArea.setFont(new Font("Comic Sans MS", Font.PLAIN, 14));
 
@@ -278,7 +281,11 @@ public class Client {
         chatInputField.addActionListener(e -> {
             String message = chatInputField.getText();
             if (!message.trim().isEmpty()) {
-                chatTextArea.append(username + ": " + message + "\n");
+                try {
+                    gameService.sendMessage(username, message);
+                } catch (Exception exception) {
+                    exception.printStackTrace();
+                }
                 chatInputField.setText("");
             }
             chatTextArea.setCaretPosition(chatTextArea.getDocument().getLength());

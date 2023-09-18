@@ -14,6 +14,7 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
 
     private JLabel turnLabel = null;
     private JButton[] board = null;
+    private JTextArea textArea = null;
 
     private ReadWriteLock mu = null;
 
@@ -28,12 +29,13 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     /**
      * the constructor.
      */
-    public GameCallBackImpl(ReadWriteLock mu, AtomicLong lastMessageTime, JButton[] board, JLabel turnLabel) throws Exception {
+    public GameCallBackImpl(ReadWriteLock mu, AtomicLong lastMessageTime, JButton[] board, JLabel turnLabel, JTextArea textArea) throws Exception {
         super();
         this.mu = mu;
         this.lastMessageTime = lastMessageTime;
         this.turnLabel = turnLabel;
         this.board = board;
+        this.textArea = textArea;
     }
 
     /**
@@ -65,6 +67,18 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
         mu.writeLock().lock();
         this.board[x * 3 + y].setText(chess);
         this.turnLabel.setText(turn);
+        mu.writeLock().unlock();
+    }
+
+    /**
+     * send message.
+     *
+     * @param message  the message.
+     */
+    @Override
+    public void send(String message) {
+        mu.writeLock().lock();
+        textArea.append(message + "\n");
         mu.writeLock().unlock();
     }
 }

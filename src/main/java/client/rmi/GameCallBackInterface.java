@@ -26,4 +26,12 @@ public interface GameCallBackInterface extends Remote {
      * @throws RemoteException the remote exception.
      */
     void move(String chess, int x, int y, String turn) throws RemoteException;
+
+    /**
+     * send message.
+     *
+     * @param message  the message.
+     * @throws RemoteException the remote exception.
+     */
+    void send(String message) throws RemoteException;
 }

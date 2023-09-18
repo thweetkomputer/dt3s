@@ -90,6 +90,32 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
         return "OK";
     }
 
+    /**
+     * send message.
+     *
+     * @param username the username.
+     * @param message  the message.
+     */
+    @Override
+    public void sendMessage(String username, String message) {
+        Player player = playingPlayers.get(username);
+        if (player == null) {
+            return;
+        }
+        Game game = player.getGame();
+        if (game == null) {
+            return;
+        }
+        message = player + ": " + message;
+        try {
+            game.getClients()[0].send(message);
+            game.getClients()[1].send(message);
+        } catch (RemoteException e) {
+            e.printStackTrace();
+            // TODO
+        }
+    }
+
     public void Start() {
         new Thread(() -> {
             while (true) {

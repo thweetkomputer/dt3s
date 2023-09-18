@@ -18,5 +18,11 @@ public interface GameInterface extends Remote {
      */
     String makeMove(String username, int x, int y) throws Exception;
 
-
+    /**
+     * send message.
+     *
+     * @param username the username.
+     * @param message  the message.
+     */
+    void sendMessage(String username, String message) throws Exception;
 }
