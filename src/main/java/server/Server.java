@@ -28,6 +28,7 @@ public class Server {
     private int port;
 
     public void start() {
+        System.setProperty("java.rmi.server.hostname", "203.101.224.167");
         HashMap<String, Player> players = new HashMap<>();
         TreeSet<Player> playerList = new TreeSet<>();
         HashMap<String, Player> freePlayers = new HashMap<>();
