@@ -5,6 +5,10 @@ import common.Player;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.TreeMap;
+import java.util.TreeSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
@@ -19,12 +23,12 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
      */
     private static final Logger LOGGER = Logger.getLogger(LoginImpl.class.getName());
 
-    private ConcurrentHashMap<String, Player> players;
-    private ConcurrentHashMap<String, Player> freePlayers;
-    private ConcurrentHashMap<String, Player> playingPlayers;
-    private ConcurrentHashMap<String, GameCallBackInterface> gameClients;
+    private HashMap<String, Player> players;
+    private TreeSet<Player> playerList;
+    private HashMap<String, Player> freePlayers;
+    private HashMap<String, Player> playingPlayers;
+    private HashMap<String, GameCallBackInterface> gameClients;
     private Lock lock;
-    private Condition condition;
 
     /**
      * the constructor.
@@ -38,47 +42,50 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
     /**
      * the constructor.
      */
-    public LoginImpl(ConcurrentHashMap<String, Player> players,
-                     ConcurrentHashMap<String, Player> freePlayers,
-                     ConcurrentHashMap<String, Player> playingPlayers,
-                     ConcurrentHashMap<String, GameCallBackInterface> gameClients,
+    public LoginImpl(HashMap<String, Player> players,
+                     TreeSet<Player> playerList,
+                     HashMap<String, Player> freePlayers,
+                     HashMap<String, Player> playingPlayers,
+                     HashMap<String, GameCallBackInterface> gameClients,
                      Lock lock,
                      Condition condition) throws RemoteException {
         super();
         this.players = players;
+        this.playerList = playerList;
         this.freePlayers = freePlayers;
         this.playingPlayers = playingPlayers;
         this.gameClients = gameClients;
         this.lock = lock;
-        this.condition = condition;
     }
 
     /**
      * login.
      *
-     * @param username the username.
-     * @return the information, "OK" if success, others if failed.
+     * @param username   the username.
+     * @param gameClient the game client.
      * @throws RemoteException the remote exception.
      */
     @Override
-    public String Login(String username,
-                        GameCallBackInterface gameClient) throws RemoteException {
+    public void Login(String username,
+                      GameCallBackInterface gameClient) throws RemoteException {
         lock.lock();
         if (players.containsKey(username)) {
+            Player player = players.get(username);
+            gameClients.put(username, gameClient);
+            if (playingPlayers.containsKey(username) || freePlayers.containsKey(username)) {
+                lock.unlock();
+                return;
+            }
+            freePlayers.put(username, player);
             lock.unlock();
-            return "Username already exists.";
+            return;
         }
         Player player = new Player(username, players.size() + 1, System.currentTimeMillis());
         players.put(username, player);
-        freePlayers.put(username, player);
+        playerList.add(player);
         gameClients.put(username, gameClient);
         LOGGER.info("Player " + username + " login.");
-        LOGGER.info("Current free players: " + freePlayers.size() + ".");
-        if (freePlayers.size() >= 2) {
-            condition.signal();
-        }
         lock.unlock();
-        return "OK";
     }
 
     /**
@@ -89,9 +96,10 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
      */
     @Override
     public void Logout(String username) throws RemoteException {
-        players.remove(username);
+        lock.lock();
         freePlayers.remove(username);
         playingPlayers.remove(username);
+        lock.unlock();
         LOGGER.info("Player " + username + " logout.");
     }
 }

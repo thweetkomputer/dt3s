@@ -1,13 +1,12 @@
 package common;
 
 import lombok.Data;
-import server.rmi.GameInterface;
 
 /**
  * the player class, contains the information of a player.
  */
 @Data
-public class Player {
+public class Player implements Comparable<Player> {
     String username;
     int rank;
     int score;
@@ -35,6 +34,30 @@ public class Player {
             return "Rank#" + rank + " " + username.substring(0, 7) + "...";
         } else {
             return "Rank#" + rank + " " + username;
+        }
+    }
+
+    /** win. */
+    public void win() {
+        score += 5;
+    }
+
+    /** lose. */
+    public void lose() {
+        score -= 5;
+    }
+
+    /** draw. */
+    public void draw() {
+        score += 2;
+    }
+
+    @Override
+    public int compareTo(Player o) {
+        if (score != o.score) {
+            return o.score - score;
+        } else {
+            return (int) (loginTime - o.loginTime);
         }
     }
 }

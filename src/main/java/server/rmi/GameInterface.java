@@ -25,4 +25,11 @@ public interface GameInterface extends Remote {
      * @param message  the message.
      */
     void sendMessage(String username, String message) throws Exception;
+
+    /**
+     * find a game.
+     *
+     * @param username the username.
+     */
+    void findGame(String username) throws Exception;
 }

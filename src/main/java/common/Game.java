@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.rmi.RemoteException;
+import java.util.TreeSet;
+import java.util.concurrent.locks.Lock;
 
 /**
  * A game room.
@@ -18,27 +20,64 @@ public class Game {
     private int turn;
     private int winner;
     private Player[] players;
+    private String[] ranks;
+    private TreeSet<Player> playerList;
     private String[] chess;
+    private Lock mu;
 
     private GameCallBackInterface[] clients;
 
+    /**
+     * the constructor.
+     *
+     * @param username the player.
+     */
     public boolean isMyTurn(String username) {
         return players[turn].getUsername().equals(username);
     }
 
+    /**
+     * move.
+     *
+     * @param x the x position.
+     * @param y the y position.
+     * @throws RemoteException the remote exception.
+     */
     public void move(int x, int y) throws RemoteException {
-        board[x][y] = chess[turn].charAt(0);
-        turn = 1 - turn;
         String turnLabel;
-        if (!finished()) {
-            turnLabel = getTurnLabel();
-        } else {
+        board[x][y] = chess[turn].charAt(0);
+        if (finished()) {
             if (winner == -1) {
                 turnLabel = "Match Drawn";
             } else {
                 turnLabel = "Player " + players[winner].getUsername() + " wins!";
             }
+            clients[0].move(chess[turn], x, y, turnLabel);
+            clients[1].move(chess[turn], x, y, turnLabel);
+            mu.lock();
+            playerList.remove(players[0]);
+            playerList.remove(players[1]);
+            if (winner != -1) {
+                players[winner].win();
+                players[1 - winner].lose();
+            } else {
+                players[0].draw();
+                players[1].draw();
+            }
+            playerList.add(players[0]);
+            playerList.add(players[1]);
+            int rank = 1;
+            for (var player : playerList) {
+                player.rank = rank++;
+                System.out.println(player + " " + player.getScore());
+            }
+            mu.unlock();
+            clients[0].ask();
+            clients[1].ask();
+            return;
         }
+        turn = 1 - turn;
+        turnLabel = getTurnLabel();
         clients[0].move(chess[1 - turn], x, y, turnLabel);
         clients[1].move(chess[1 - turn], x, y, turnLabel);
     }
@@ -47,6 +86,11 @@ public class Game {
         return players[turn].toString() + "'s turn (" + chess[turn] + ")";
     }
 
+    /**
+     * check if the game is finished.
+     *
+     * @return true if finished, false otherwise.
+     */
     public boolean finished() {
         for (int i = 0; i < 3; ++i) {
             if (board[i][0] != ' ' && board[i][0] == board[i][1] && board[i][1] == board[i][2]) {

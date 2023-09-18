@@ -11,8 +11,6 @@ import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
@@ -59,7 +57,12 @@ public class Client {
 
     public void start() {
         mu.writeLock().lock();
-        createAndShowGUI();
+        try {
+            createAndShowGUI();
+        } catch (Exception e) {
+            e.printStackTrace();
+            // TODO
+        }
         mu.writeLock().unlock();
         System.out.println("UI created.");
         System.out.println("Connecting to server...");
@@ -82,14 +85,11 @@ public class Client {
             }
 
             GameCallBackInterface gameCallBackInterface = new GameCallBackImpl(mu, lastMessageTime, boards, turnLabel,
-                    chatTextArea);
-            String result = loginService.Login(username, gameCallBackInterface);
-            // if login failed, print the reason and return.
-            if (!result.equals("OK")) {
-                System.out.println(result);
-                exit(0);
-            }
+                    chatTextArea, gameService, username);
+
+            loginService.Login(username, gameCallBackInterface);
             System.err.println("Login success.");
+            GameCallBackImpl.findingPlayer(500, mu, turnLabel, gameService, username);
         } catch (Exception e) {
             System.err.println("Client exception: " + e);
             if (loginService != null) {
@@ -110,7 +110,7 @@ public class Client {
         }));
     }
 
-    private void createAndShowGUI() {
+    private void createAndShowGUI() throws Exception {
         JFrame frame = new JFrame("Tic Tac Toe");
         frame.setSize(700, 500);
         frame.setMinimumSize(new Dimension(700, 500));
@@ -125,7 +125,7 @@ public class Client {
 
     }
 
-    private void startGame(JFrame frame, long lastMessageTime) {
+    private void startGame(JFrame frame, long lastMessageTime) throws Exception {
         frame.getContentPane().removeAll();
         frame.repaint();
         frame.revalidate();
@@ -199,33 +199,6 @@ public class Client {
         turnLabel.setBackground(Color.WHITE);
         turnLabel.setHorizontalAlignment(JLabel.CENTER);
 
-        // Initialize counter and Timer
-        Timer timer;
-        int delay = 500;
-        ActionListener taskPerformer = new ActionListener() {
-            private int dotCount = 0;
-
-            public void actionPerformed(ActionEvent evt) {
-                mu.readLock().lock();
-                if (!turnLabel.getText().startsWith("Finding Player")) {
-                    ((Timer) (evt.getSource())).stop();
-                    mu.readLock().unlock();
-                    return;
-                }
-                mu.readLock().unlock();
-                dotCount++;
-                mu.writeLock().lock();
-                turnLabel.setText("Finding Player" + ".".repeat(Math.max(0, dotCount)));
-                // reset dotCount if it reaches 3
-                if (dotCount >= 3) {
-                    dotCount = 0;
-                }
-                mu.writeLock().unlock();
-            }
-        };
-
-        timer = new Timer(delay, taskPerformer);
-        timer.start();
 
         // draw board
         for (int i = 0; i < 9; i++) {
@@ -270,6 +243,7 @@ public class Client {
         chatTextArea = new JTextArea();
         chatTextArea.setEditable(false);
         chatTextArea.setFont(new Font("Comic Sans MS", Font.PLAIN, 14));
+        // TODO: from bottom
 
         // scroll pane
         JScrollPane chatScrollPane = new JScrollPane(chatTextArea);

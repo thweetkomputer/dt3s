@@ -12,11 +12,11 @@ public interface LoginInterface extends Remote {
     /**
      * login.
      *
-     * @param username the username.
-     * @return the information, "OK" if success, others if failed.
+     * @param username   the username.
+     * @param gameClient the game client.
      * @throws RemoteException the remote exception.
      */
-    String Login(String username, GameCallBackInterface gameClient) throws RemoteException;
+    void Login(String username, GameCallBackInterface gameClient) throws RemoteException;
 
     /**
      * logout

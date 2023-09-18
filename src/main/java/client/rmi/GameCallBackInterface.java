@@ -34,4 +34,9 @@ public interface GameCallBackInterface extends Remote {
      * @throws RemoteException the remote exception.
      */
     void send(String message) throws RemoteException;
+
+    /**
+     * ask for a rematch.
+     */
+    void ask() throws RemoteException;
 }

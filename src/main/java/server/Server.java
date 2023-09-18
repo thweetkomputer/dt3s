@@ -10,7 +10,8 @@ import java.rmi.Naming;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
+import java.util.TreeSet;
 import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -27,18 +28,19 @@ public class Server {
     private int port;
 
     public void start() {
-        ConcurrentHashMap<String, Player> players = new ConcurrentHashMap<>();
-        ConcurrentHashMap<String, Player> freePlayers = new ConcurrentHashMap<>();
-        ConcurrentHashMap<String, Player> playingPlayers = new ConcurrentHashMap<>();
-        ConcurrentHashMap<String, GameCallBackInterface> gameClients = new ConcurrentHashMap<>();
+        HashMap<String, Player> players = new HashMap<>();
+        TreeSet<Player> playerList = new TreeSet<>();
+        HashMap<String, Player> freePlayers = new HashMap<>();
+        HashMap<String, Player> playingPlayers = new HashMap<>();
+        HashMap<String, GameCallBackInterface> gameClients = new HashMap<>();
         Lock lock = new ReentrantLock();
         Condition condition = lock.newCondition();
         try {
             startRegistry();
             registerService(
-                    new LoginImpl(players, freePlayers, playingPlayers, gameClients, lock, condition),
+                    new LoginImpl(players, playerList, freePlayers, playingPlayers, gameClients, lock, condition),
                     "login");
-            GameImpl gameService = new GameImpl(freePlayers, playingPlayers, gameClients, lock, condition);
+            GameImpl gameService = new GameImpl(players, playerList, freePlayers, playingPlayers, gameClients, lock, condition);
             registerService(gameService, "game");
             gameService.Start();
         } catch (Exception e) {
