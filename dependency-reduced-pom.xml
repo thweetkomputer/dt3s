@@ -50,6 +50,21 @@
               <minimizeJar>true</minimizeJar>
             </configuration>
           </execution>
+          <execution>
+            <id>hello_client</id>
+            <phase>package</phase>
+            <goals>
+              <goal>shade</goal>
+            </goals>
+            <configuration>
+              <transformers>
+                <transformer>
+                  <mainClass>cmd.HelloClient</mainClass>
+                </transformer>
+              </transformers>
+              <finalName>hello</finalName>
+            </configuration>
+          </execution>
         </executions>
       </plugin>
     </plugins>

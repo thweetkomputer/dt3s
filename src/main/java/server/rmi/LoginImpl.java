@@ -80,6 +80,7 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
             lock.unlock();
             return;
         }
+        LOGGER.info("Player " + username + " try to login.");
         Player player = new Player(username, players.size() + 1, System.currentTimeMillis());
         players.put(username, player);
         playerList.add(player);

@@ -70,6 +70,7 @@ public class Client {
         try {
             loginService = (LoginInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/login");
             gameService = (GameInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/game");
+            System.out.println("Connected to server.");
 
             // bind click
             for (int i = 0; i < 9; ++i) {
@@ -77,7 +78,6 @@ public class Client {
                 int finalI = i;
                 button.addActionListener(e -> {
                     try {
-                        System.out.println("click " + finalI);
                         gameService.makeMove(username, finalI / 3, finalI % 3);
                     } catch (Exception exception) {
                         exception.printStackTrace();
@@ -87,6 +87,7 @@ public class Client {
 
             GameCallBackInterface gameCallBackInterface = new GameCallBackImpl(mu, lastMessageTime, boards, turnLabel,
                     chatTextArea, gameService, username);
+            System.out.println("Login...");
 
             loginService.Login(username, gameCallBackInterface);
             System.err.println("Login success.");
