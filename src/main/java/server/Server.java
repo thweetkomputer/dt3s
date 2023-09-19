@@ -37,6 +37,7 @@ public class Server {
         Condition condition = lock.newCondition();
         try {
             startRegistry();
+            Naming.rebind("rmi://203.101.224.167:1099/hello", new HelloImpl());
             registerService(
                     new LoginImpl(players, playerList, freePlayers, playingPlayers, gameClients, lock, condition),
                     "login");
