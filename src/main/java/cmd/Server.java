@@ -4,6 +4,11 @@ package cmd;
  * command line server starter.
  */
 public class Server {
+
+    static {
+        System.setProperty("java.rmi.server.hostname", "203.101.224.167");
+    }
+
     public static void main(String[] args) {
         // use try-catch to avoid the program crash and give a friendly reminder.
         try {
