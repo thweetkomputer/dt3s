@@ -68,6 +68,7 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
     @Override
     public void Login(String username,
                       GameCallBackInterface gameClient) throws RemoteException {
+        LOGGER.info("Player " + username + " try to login.");
         lock.lock();
         if (players.containsKey(username)) {
             Player player = players.get(username);
@@ -80,7 +81,6 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
             lock.unlock();
             return;
         }
-        LOGGER.info("Player " + username + " try to login.");
         Player player = new Player(username, players.size() + 1, System.currentTimeMillis());
         players.put(username, player);
         playerList.add(player);
