@@ -48,8 +48,7 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
                      HashMap<String, Player> freePlayers,
                      HashMap<String, Player> playingPlayers,
                      HashMap<String, GameCallBackInterface> gameClients,
-                     Lock lock,
-                     Condition condition) throws RemoteException {
+                     Lock lock) throws RemoteException {
         super();
         this.players = players;
         this.playerList = playerList;
@@ -85,8 +84,8 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
         players.put(username, player);
         playerList.add(player);
         gameClients.put(username, gameClient);
-        LOGGER.info("Player " + username + " login.");
         lock.unlock();
+        LOGGER.info("Player " + username + " login.");
     }
 
     /**

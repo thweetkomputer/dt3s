@@ -120,4 +120,14 @@ public class Game {
         winner = -1;
         return true;
     }
+
+    /**
+     * start the game.
+     */
+    public void start() {
+        // TODO
+        while (true) {
+
+        }
+    }
 }

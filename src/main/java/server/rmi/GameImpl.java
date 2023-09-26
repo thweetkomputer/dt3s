@@ -34,15 +34,8 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
     private Lock lock;
     private Condition condition;
 
-    private final Random random = new Random();
 
-    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
-            5,
-            10,
-            60,
-            TimeUnit.SECONDS,
-            new ArrayBlockingQueue<>(100)
-    );
+
 
     /**
      * the constructor.
@@ -145,82 +138,12 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
                 return;
             }
             freePlayers.put(username, player);
+            LOGGER.info("Player " + username + " is looking for a game.");
             condition.signalAll();
         } finally {
             lock.unlock();
         }
     }
 
-    public void Start() {
-        new Thread(() -> {
-            while (true) {
-                LOGGER.info("Waiting for players...");
-                lock.lock();
-                while (freePlayers.size() < 2) {
-                    try {
-                        LOGGER.info("Not enough players, waiting...");
-                        condition.await();
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                }
-                // get two players
-                Player player1 = freePlayers.values().iterator().next();
-                freePlayers.remove(player1.getUsername());
-                Player player2 = freePlayers.values().iterator().next();
-                freePlayers.remove(player2.getUsername());
-                lock.unlock();
-                // start game
-                executor.execute(() -> StartGame(player1, player2));
-            }
-        }).start();
-    }
 
-    public void StartGame(Player player1, Player player2) {
-        LOGGER.info("Start game between " + player1.getUsername() + " and " + player2.getUsername() + ".");
-        // start game
-        // TODO: in case player1 or player2 is offline
-        lock.lock();
-        try {
-            playingPlayers.put(player1.getUsername(), player1);
-            playingPlayers.put(player2.getUsername(), player2);
-
-            Player[] players;
-            String[] chess;
-            GameCallBackInterface[] clients;
-            // random between 0 and 1
-            int randomInt = random.nextInt(2);
-            if (randomInt == 0) {
-                chess = new String[]{"X", "O"};
-            } else {
-                chess = new String[]{"O", "X"};
-            }
-            randomInt = random.nextInt(2);
-            GameCallBackInterface client1 = this.clients.get(player1.getUsername());
-            GameCallBackInterface client2 = this.clients.get(player2.getUsername());
-            if (randomInt == 0) {
-                players = new Player[]{player1, player2};
-                clients = new GameCallBackInterface[]{client1, client2};
-            } else {
-                players = new Player[]{player2, player1};
-                clients = new GameCallBackInterface[]{client2, client1};
-            }
-            Game game = new Game(new char[][]{
-                    {' ', ' ', ' '},
-                    {' ', ' ', ' '},
-                    {' ', ' ', ' '}
-            }, 0, -1, players, new String[]{player1.toString(), player2.toString()},
-                    playerList, chess, lock, clients);
-            player1.setGame(game);
-            player2.setGame(game);
-
-            client1.startGame(player1.getUsername(), System.currentTimeMillis(), game.getTurnLabel());
-            client2.startGame(player2.getUsername(), System.currentTimeMillis(), game.getTurnLabel());
-        } catch (RemoteException e) {
-            e.printStackTrace();
-        } finally {
-            lock.unlock();
-        }
-        // TODO timer
-    }
 }

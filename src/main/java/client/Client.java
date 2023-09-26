@@ -246,7 +246,6 @@ public class Client {
         chatTextArea.setFont(new Font("Comic Sans MS", Font.PLAIN, 16));
         chatTextArea.setLineWrap(true);
         chatTextArea.setWrapStyleWord(true);
-        // TODO: from bottom
 
         // scroll pane
         JScrollPane chatScrollPane = new JScrollPane(chatTextArea);
