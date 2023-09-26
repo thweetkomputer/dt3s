@@ -181,8 +181,8 @@ public class Server {
                 {' ', ' ', ' '},
                 {' ', ' ', ' '},
                 {' ', ' ', ' '}
-        }, 0, -1, players, new String[]{player1.toString(), player2.toString()},
-                playerList, chess, lock, clients);
+        }, 0, -1, 20, players, new String[]{player1.toString(), player2.toString()},
+                playerList, chess, lock, clients, new ReentrantLock());
         player1.setGame(game);
         player2.setGame(game);
         lock.unlock();
@@ -208,6 +208,11 @@ public class Server {
             lock.unlock();
             return;
         }
-        game.start();
+        try {
+            game.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+            // TODO
+        }
     }
 }

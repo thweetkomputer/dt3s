@@ -20,6 +20,7 @@ public class Game {
     private char[][] board;
     private int turn;
     private int winner;
+    private int timer = 20;
     private Player[] players;
     private String[] ranks;
     private TreeSet<Player> playerList;
@@ -27,6 +28,7 @@ public class Game {
     private Lock mu;
 
     private GameCallBackInterface[] clients;
+    private Lock gameLock;
 
     /**
      * the constructor.
@@ -34,7 +36,10 @@ public class Game {
      * @param username the player.
      */
     public boolean isMyTurn(String username) {
-        return players[turn].getUsername().equals(username);
+        gameLock.lock();
+        var result = players[getTurn()].getUsername().equals(username);
+        gameLock.unlock();
+        return result;
     }
 
     /**
@@ -45,6 +50,7 @@ public class Game {
      * @throws RemoteException the remote exception.
      */
     public void move(int x, int y) throws RemoteException {
+        gameLock.lock();
         String turnLabel;
         board[x][y] = chess[turn].charAt(0);
         if (finished()) {
@@ -72,6 +78,7 @@ public class Game {
                 player.rank = rank++;
             }
             mu.unlock();
+            gameLock.unlock();
             clients[0].ask();
             clients[1].ask();
             return;
@@ -80,6 +87,7 @@ public class Game {
         turnLabel = getTurnLabel();
         clients[0].move(chess[1 - turn], x, y, turnLabel);
         clients[1].move(chess[1 - turn], x, y, turnLabel);
+        gameLock.unlock();
     }
 
     public String getTurnLabel() {
@@ -92,6 +100,7 @@ public class Game {
      * @return true if finished, false otherwise.
      */
     public boolean finished() {
+        var turn = getTurn();
         for (int i = 0; i < 3; ++i) {
             if (board[i][0] != ' ' && board[i][0] == board[i][1] && board[i][1] == board[i][2]) {
                 winner = turn;
@@ -124,10 +133,31 @@ public class Game {
     /**
      * start the game.
      */
-    public void start() {
+    public void start() throws RemoteException {
         // TODO
         while (true) {
-
+            var turn = getTurn();
+            if (timer < 0) {
+                winner = 1 - turn;
+                mu.lock();
+                players[winner].win();
+                players[1 - winner].lose();
+                var turnLabel = "Player " + players[winner].getUsername() + " wins!";
+                clients[0].setLabel(turnLabel);
+                clients[1].setLabel(turnLabel);
+                mu.unlock();
+                break;
+            }
+            while (timer >= 0) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                }
+                timer--;
+                // TODO check if the player is still online
+                clients[0].setTimer(timer);
+                clients[1].setTimer(timer);
+            }
         }
     }
 }

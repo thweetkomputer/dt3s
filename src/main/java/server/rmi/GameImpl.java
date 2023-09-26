@@ -35,8 +35,6 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
     private Condition condition;
 
 
-
-
     /**
      * the constructor.
      */

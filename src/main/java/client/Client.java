@@ -35,6 +35,8 @@ public class Client {
 
     private JTextArea chatTextArea = new MemoryTextArea(10);
 
+    private JLabel timerValue = new JLabel("20", SwingConstants.CENTER);
+
     private JButton[] boards = new JButton[9];
 
     {
@@ -87,7 +89,7 @@ public class Client {
             }
 
             GameCallBackInterface gameCallBackInterface = new GameCallBackImpl(mu, lastMessageTime, boards, turnLabel,
-                    chatTextArea, gameService, username);
+                    chatTextArea, timerValue, gameService, username);
 
             loginService.Login(username, gameCallBackInterface);
             System.err.println("Login success.");
@@ -113,7 +115,7 @@ public class Client {
     }
 
     private void createAndShowGUI() throws Exception {
-        JFrame frame = new JFrame("Tic Tac Toe");
+        JFrame frame = new JFrame("Tic Tac Toe  - " + username);
         frame.setSize(700, 500);
         frame.setMinimumSize(new Dimension(700, 500));
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -147,7 +149,7 @@ public class Client {
         timerLabel.setFont(new Font("Arial", Font.PLAIN, 20));
 
         // timer value label
-        JLabel timerValue = new JLabel("30", SwingConstants.CENTER);
+        timerValue = new JLabel("20", SwingConstants.CENTER);
         timerValue.setFont(new Font("Arial", Font.BOLD, 40));
 
         // Add labels to timer panel

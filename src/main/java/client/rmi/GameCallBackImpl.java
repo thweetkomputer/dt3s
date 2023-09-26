@@ -8,6 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -23,6 +24,7 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     private JLabel turnLabel = null;
     private JButton[] board = null;
     private JTextArea textArea = null;
+    private JLabel timerValue = null;
 
     private ReadWriteLock mu = null;
 
@@ -42,13 +44,14 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
      * the constructor.
      */
     public GameCallBackImpl(ReadWriteLock mu, AtomicLong lastMessageTime, JButton[] board, JLabel turnLabel,
-                            JTextArea textArea, GameInterface service, String username) throws Exception {
+                            JTextArea textArea, JLabel timerValue, GameInterface service, String username) throws Exception {
         super();
         this.mu = mu;
         this.lastMessageTime = lastMessageTime;
         this.turnLabel = turnLabel;
         this.board = board;
         this.textArea = textArea;
+        this.timerValue = timerValue;
         this.service = service;
         this.username = username;
     }
@@ -82,6 +85,18 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
         mu.writeLock().lock();
         this.board[x * 3 + y].setText(chess);
         this.turnLabel.setText(turn);
+        mu.writeLock().unlock();
+    }
+
+    /**
+     * set label.
+     *
+     * @param label the label.
+     */
+    @Override
+    public void setLabel(String label) {
+        mu.writeLock().lock();
+        this.turnLabel.setText(label);
         mu.writeLock().unlock();
     }
 
@@ -141,6 +156,13 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
             }
         });
 
+    }
+
+    @Override
+    public void setTimer(int timer) throws RemoteException {
+        mu.writeLock().lock();
+        timerValue.setText(String.valueOf(timer));
+        mu.writeLock().unlock();
     }
 
     public static void findingPlayer(int delay, ReadWriteLock mu, JLabel turnLabel, GameInterface service,
