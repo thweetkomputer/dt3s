@@ -26,6 +26,14 @@ public class MemoryTextArea extends JTextArea {
     }
 
     @Override
+    public void setText(String t) {
+        super.setText(t);
+        if (t == null) {
+            messages.clear();
+        }
+    }
+
+    @Override
     public void append(String str) {
         if (messages.size() < messageLimit) {
             messages.add(str);

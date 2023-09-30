@@ -13,11 +13,12 @@ public interface GameCallBackInterface extends Remote {
     /**
      * start the game.
      *
-     * @param opponent    the opponent.
-     * @param messageTime the message time, used to stop the timer.
+     * @param opponent the opponent.
+     * @param turn     the turn.
+     * @param label    the label.
      * @throws RemoteException the remote exception.
      */
-    void startGame(String opponent, long messageTime, String turn) throws RemoteException;
+    void startGame(String opponent, String turn, String label) throws RemoteException;
 
     /**
      * move.
@@ -26,9 +27,10 @@ public interface GameCallBackInterface extends Remote {
      * @param x     the x coordinate.
      * @param y     the y coordinate.
      * @param turn  the turn.
+     * @param label the label.
      * @throws RemoteException the remote exception.
      */
-    void move(String chess, int x, int y, String turn) throws RemoteException;
+    void move(String chess, int x, int y, String turn, String label) throws RemoteException;
 
     /**
      * set label.
@@ -56,8 +58,10 @@ public interface GameCallBackInterface extends Remote {
     /**
      * set timer.
      *
-     * @param timer the timer.
+     * @param timer           the timer.
+     * @param lastMessageTime the last message time.
+     * @return true if success, false if failed.
      * @throws RemoteException the remote exception.
      */
-    void setTimer(int timer) throws RemoteException;
+    boolean setTimer(int timer, Long lastMessageTime) throws RemoteException;
 }

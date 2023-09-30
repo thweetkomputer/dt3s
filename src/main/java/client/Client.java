@@ -4,6 +4,7 @@ package client;
 import client.rmi.GameCallBackImpl;
 import client.rmi.GameCallBackInterface;
 import common.MemoryTextArea;
+import common.MyReentrantLock;
 import common.PlaceholderTextField;
 import server.rmi.GameInterface;
 import server.rmi.LoginInterface;
@@ -14,8 +15,11 @@ import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.logging.Logger;
 
 import static java.lang.System.exit;
 
@@ -23,21 +27,22 @@ import static java.lang.System.exit;
  * the client class, contains GUI.
  */
 public class Client {
+    private static final Logger LOGGER = Logger.getLogger(Client.class.getName());
     private final String username;
     private final String ip;
     private final int port;
-    private AtomicLong lastMessageTime = new AtomicLong(0);
+    private final AtomicLong lastMessageTime = new AtomicLong(0);
 
     LoginInterface loginService;
     GameInterface gameService;
-    private ReadWriteLock mu = new ReentrantReadWriteLock();
-    private JLabel turnLabel = new JLabel();
+    private final Lock mu = new ReentrantLock();
+    private final JLabel turnLabel = new JLabel();
 
-    private JTextArea chatTextArea = new MemoryTextArea(10);
+    private final JTextArea chatTextArea = new MemoryTextArea(10);
 
     private JLabel timerValue = new JLabel("20", SwingConstants.CENTER);
 
-    private JButton[] boards = new JButton[9];
+    private final JButton[] boards = new JButton[9];
 
     {
         for (int i = 0; i < boards.length; i++) {
@@ -60,14 +65,14 @@ public class Client {
     }
 
     public void start() {
-        mu.writeLock().lock();
+        mu.lock();
         try {
             createAndShowGUI();
         } catch (Exception e) {
-            e.printStackTrace();
-            // TODO
+            LOGGER.info("Create GUI failed: " + e.getMessage());
+            return;
         }
-        mu.writeLock().unlock();
+        mu.unlock();
         System.out.println("UI created.");
         System.out.println("Connecting to server...");
         try {
@@ -80,10 +85,11 @@ public class Client {
                 int finalI = i;
                 button.addActionListener(e -> {
                     try {
-                        System.out.println("click " + finalI);
-                        gameService.makeMove(username, finalI / 3, finalI % 3);
+                        if (!"OK".equals(gameService.makeMove(username, finalI / 3, finalI % 3))) {
+                            LOGGER.info("Make move failed: " + username);
+                        }
                     } catch (Exception exception) {
-                        exception.printStackTrace();
+                        LOGGER.info("Make move failed: " + exception.getMessage());
                     }
                 });
             }
@@ -123,13 +129,13 @@ public class Client {
         frame.setResizable(false);
         frame.setBackground(Color.WHITE);
         frame.getContentPane().setBackground(Color.WHITE);
-        startGame(frame, 0);
+        startGame(frame);
 
         frame.setVisible(true);
 
     }
 
-    private void startGame(JFrame frame, long lastMessageTime) throws Exception {
+    private void startGame(JFrame frame) throws Exception {
         frame.getContentPane().removeAll();
         frame.repaint();
         frame.revalidate();
@@ -252,6 +258,19 @@ public class Client {
         chatScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         chatScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
+        JTextField chatInputField = getjTextField();
+
+        chatPanel.add(chatLabel, BorderLayout.NORTH);
+        chatPanel.add(chatScrollPane, BorderLayout.CENTER);
+        chatPanel.add(chatInputField, BorderLayout.SOUTH);
+
+        mainPanel.add(chatPanel);
+
+        frame.add(mainPanel);
+        frame.setVisible(true);
+    }
+
+    private JTextField getjTextField() {
         JTextField chatInputField = new PlaceholderTextField("Type your message here...");
         chatInputField.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
         chatInputField.setBorder(null);
@@ -272,14 +291,6 @@ public class Client {
         chatInputField.setPreferredSize(dim);
         chatInputField.setMinimumSize(dim);
         chatInputField.setMaximumSize(dim);
-
-        chatPanel.add(chatLabel, BorderLayout.NORTH);
-        chatPanel.add(chatScrollPane, BorderLayout.CENTER);
-        chatPanel.add(chatInputField, BorderLayout.SOUTH);
-
-        mainPanel.add(chatPanel);
-
-        frame.add(mainPanel);
-        frame.setVisible(true);
+        return chatInputField;
     }
 }

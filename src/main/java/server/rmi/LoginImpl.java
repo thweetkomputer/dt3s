@@ -8,11 +8,7 @@ import exception.GameException;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
-import java.util.HashSet;
-import java.util.TreeMap;
 import java.util.TreeSet;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.logging.Logger;
 
@@ -102,7 +98,7 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
         if (playingPlayers.get(username) != null) {
             try {
                 playingPlayers.get(username).getGame().stop(username);
-            } catch (GameException e) {
+            } catch (GameException ignored) {
             }
             playingPlayers.remove(username);
         }

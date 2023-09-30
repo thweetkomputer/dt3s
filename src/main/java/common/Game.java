@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
+import java.util.logging.Logger;
 
 /**
  * A game room.
@@ -17,6 +18,8 @@ import java.util.concurrent.locks.Lock;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Game {
+    private static final Logger LOGGER = Logger.getLogger(Game.class.getName());
+
     private char[][] board;
     private int turn;
     private int winner;
@@ -57,27 +60,33 @@ public class Game {
             if (winner == -1) {
                 turnLabel = "Match Drawn";
             } else {
-                turnLabel = "Player " + players[winner].getUsername() + " wins!";
+                String winnerName = players[winner].getUsername();
+                turnLabel = "Player " + winnerName + " wins!";
             }
+            reRank();
+            gameLock.unlock();
             try {
-                clients[0].move(chess[turn], x, y, turnLabel);
+                clients[0].move(chess[turn], x, y, null, turnLabel);
             } catch (Exception e) {
+                gameLock.unlock();
                 throw new GameException(players[0].getUsername());
             }
             try {
-                clients[1].move(chess[turn], x, y, turnLabel);
+                clients[1].move(chess[turn], x, y, null, turnLabel);
             } catch (Exception e) {
+                gameLock.unlock();
                 throw new GameException(players[1].getUsername());
             }
-            reRank();
             try {
                 clients[0].ask();
             } catch (Exception e) {
+                gameLock.unlock();
                 throw new GameException(players[0].getUsername());
             }
             try {
                 clients[1].ask();
             } catch (Exception e) {
+                gameLock.unlock();
                 throw new GameException(players[1].getUsername());
             }
             return;
@@ -85,15 +94,16 @@ public class Game {
         turn = 1 - turn;
         timer = 20;
         turnLabel = getTurnLabel();
+        String turnName = players[turn].getUsername();
         try {
-            clients[0].setTimer(timer);
-            clients[0].move(chess[1 - turn], x, y, turnLabel);
+            clients[0].setTimer(timer, null);
+            clients[0].move(chess[1 - turn], x, y, turnName, turnLabel);
         } catch (Exception e) {
             throw new GameException(players[0].getUsername());
         }
         try {
-            clients[1].setTimer(timer);
-            clients[1].move(chess[1 - turn], x, y, turnLabel);
+            clients[1].setTimer(timer, null);
+            clients[1].move(chess[1 - turn], x, y, turnName, turnLabel);
         } catch (Exception e) {
             throw new GameException(players[1].getUsername());
         }
@@ -148,51 +158,6 @@ public class Game {
         }
     }
 
-    /**
-     * start the game.
-     */
-    public void start() throws GameException {
-        while (!finished()) {
-            var turn = getTurn();
-            if (timer < 0) {
-                // TODO random choice
-                winner = 1 - turn;
-                mu.lock();
-                players[winner].win();
-                players[1 - winner].lose();
-                var turnLabel = "Player " + players[winner].getUsername() + " wins!";
-                try {
-                    clients[0].setLabel(turnLabel);
-                } catch (Exception e) {
-                    throw new GameException(players[0].getUsername());
-                }
-                try {
-                    clients[1].setLabel(turnLabel);
-                } catch (Exception e) {
-                    throw new GameException(players[1].getUsername());
-                }
-                mu.unlock();
-                break;
-            }
-            while (timer >= 0 && !finished()) {
-                try {
-                    Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                }
-                timer--;
-                try {
-                    clients[0].setTimer(timer);
-                } catch (Exception e) {
-                    throw new GameException(players[0].getUsername());
-                }
-                try {
-                    clients[1].setTimer(timer);
-                } catch (Exception e) {
-                    throw new GameException(players[1].getUsername());
-                }
-            }
-        }
-    }
 
     /**
      * stop the game.
@@ -206,13 +171,16 @@ public class Game {
         } else {
             winner = 0;
         }
+        gameLock.unlock();
+        reRank();
         var turnLabel = "Player " + players[winner].getUsername() + " wins!";
         try {
             clients[winner].setLabel(turnLabel);
         } catch (Exception e) {
+            LOGGER.info("Set label failed: " + e.getMessage());
             throw new GameException(players[winner].getUsername());
         }
-        reRank();
+
         try {
             clients[winner].ask();
         } catch (Exception e) {
@@ -221,7 +189,8 @@ public class Game {
     }
 
     private void reRank() {
-        mu.lock();
+        players[0].setGame(null);
+        players[1].setGame(null);
         playerList.remove(players[0]);
         playerList.remove(players[1]);
         if (winner != -1) {
@@ -237,7 +206,5 @@ public class Game {
         for (Player player : playerList) {
             player.rank = rank++;
         }
-        mu.unlock();
-        gameLock.unlock();
     }
 }

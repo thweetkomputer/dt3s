@@ -104,7 +104,7 @@ public class Server {
             lock.lock();
             while (freePlayers.size() < 2) {
                 try {
-                    LOGGER.info("Not enough players, waiting...");
+                    LOGGER.info("No enough players, waiting...");
                     condition.await();
                 } catch (InterruptedException e) {
                     e.printStackTrace();
@@ -151,6 +151,7 @@ public class Server {
     }
 
     private void startGame(Player player1, Player player2) {
+        // TODO: check GameException
         LOGGER.info("Start game between " + player1.getUsername() + " and " + player2.getUsername() + ".");
         // start game
         // TODO: in case player1 or player2 is offline
@@ -182,7 +183,7 @@ public class Server {
         player2.setGame(game);
         lock.unlock();
         try {
-            client1.startGame(player2.getUsername(), System.currentTimeMillis(), game.getTurnLabel());
+            client1.startGame(player2.getUsername(), players[turn].getUsername(), game.getTurnLabel());
         } catch (RemoteException e) {
             LOGGER.info("Start game for " + player1.getUsername() + " failed: " + e.getMessage());
             lock.lock();
@@ -193,7 +194,7 @@ public class Server {
             return;
         }
         try {
-            client2.startGame(player1.getUsername(), System.currentTimeMillis(), game.getTurnLabel());
+            client2.startGame(player1.getUsername(), players[turn].getUsername(), game.getTurnLabel());
         } catch (RemoteException e) {
             LOGGER.info("Start game for " + player2.getUsername() + " failed: " + e.getMessage());
             lock.lock();
@@ -202,16 +203,6 @@ public class Server {
             playingPlayers.remove(player2.getUsername());
             lock.unlock();
             return;
-        }
-        try {
-            game.start();
-        } catch (GameException ge) {
-            LOGGER.info("Game exception:" + ge.getMessage());
-            String username = ge.getUsername();
-            // TODO add another to freePlayers
-        } catch (Exception e) {
-            e.printStackTrace();
-            // TODO
         }
     }
 }

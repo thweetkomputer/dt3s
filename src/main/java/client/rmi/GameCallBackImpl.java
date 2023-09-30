@@ -1,8 +1,6 @@
 // Chen Zhao 1427714
 package client.rmi;
 
-import common.Game;
-import exception.GameException;
 import lombok.Data;
 import server.rmi.GameInterface;
 
@@ -12,14 +10,17 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
+import java.util.ArrayList;
 import java.util.concurrent.atomic.AtomicLong;
-import java.util.concurrent.locks.ReadWriteLock;
+import java.util.concurrent.locks.Lock;
+import java.util.logging.Logger;
 
 /**
  * the game callback implementation.
  */
 @Data
 public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBackInterface {
+    private static final Logger LOGGER = Logger.getLogger(GameCallBackImpl.class.getName());
 
     private AtomicLong lastMessageTime = null;
 
@@ -28,7 +29,7 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     private JTextArea textArea = null;
     private JLabel timerValue = null;
 
-    private ReadWriteLock mu = null;
+    private Lock mu = null;
 
     private GameInterface service = null;
 
@@ -45,7 +46,7 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     /**
      * the constructor.
      */
-    public GameCallBackImpl(ReadWriteLock mu, AtomicLong lastMessageTime, JButton[] board, JLabel turnLabel,
+    public GameCallBackImpl(Lock mu, AtomicLong lastMessageTime, JButton[] board, JLabel turnLabel,
                             JTextArea textArea, JLabel timerValue, GameInterface service, String username) throws Exception {
         super();
         this.mu = mu;
@@ -62,16 +63,19 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
      * start the game.
      *
      * @param opponent    the opponent.
-     * @param messageTime the message time, used to stop the timer.
      * @param turn        the turn.
+     * @param label       the label.
+     * @throws RemoteException the remote exception.
      */
     @Override
-    public void startGame(String opponent, long messageTime, String turn) {
+    public void startGame(String opponent, String turn, String label) throws RemoteException {
         System.out.println("start game with " + opponent);
-        mu.writeLock().lock();
-        this.lastMessageTime.set(messageTime);
-        this.turnLabel.setText(turn);
-        mu.writeLock().unlock();
+        mu.lock();
+        turnLabel.setText(label);
+        lastMessageTime.set(System.currentTimeMillis());
+        textArea.setText(null);
+        mu.unlock();
+        startTimer(lastMessageTime.get(), turn);
     }
 
     /**
@@ -81,44 +85,103 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
      * @param x     the x coordinate.
      * @param y     the y coordinate.
      * @param turn  the turn.
+     * @param label the label.
+     * @throws RemoteException the remote exception.
      */
     @Override
-    public void move(String chess, int x, int y, String turn) {
-        mu.writeLock().lock();
-        this.board[x * 3 + y].setText(chess);
-        this.turnLabel.setText(turn);
-        mu.writeLock().unlock();
+    public void move(String chess, int x, int y, String turn, String label) throws RemoteException {
+        mu.lock();
+        board[x * 3 + y].setText(chess);
+        turnLabel.setText(label);
+        lastMessageTime.set(System.currentTimeMillis());
+        var lastMessageTime = this.lastMessageTime.get();
+        mu.unlock();
+        startTimer(lastMessageTime, turn);
+    }
+
+    public void startTimer(long lastMessageTime, String turn) {
+        // start timer
+        new Thread(() -> {
+            var timer = 20;
+            LOGGER.info("Start timer");
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException e) {
+                    LOGGER.info("Timer interrupted");
+                }
+                if (timer == 0) {
+                    if (username.equals(turn)) {
+                        // random choice
+                        java.util.List<Integer> available = new ArrayList<>();
+                        mu.lock();
+                        for (int i = 0; i < 9; ++i) {
+                            if (board[i].getText().isEmpty()) {
+                                available.add(i);
+                            }
+                        }
+                        mu.unlock();
+                        if (available.isEmpty()) {
+                            continue;
+                        }
+                        int random = (int) (Math.random() * available.size());
+                        int index = available.get(random);
+                        int x1 = index / 3;
+                        int y1 = index % 3;
+                        try {
+                            service.makeMove(username, x1, y1);
+                        } catch (Exception e) {
+                            LOGGER.info("Make move failed: " + e.getMessage());
+                        }
+                    }
+                }
+                try {
+                    if (!setTimer(timer--, lastMessageTime)) {
+                        LOGGER.info("Set timer failed");
+                        return;
+                    }
+                } catch (Exception exception) {
+                    LOGGER.info("Set timer failed: " + exception.getMessage());
+                }
+            }
+        }).start();
     }
 
     /**
      * set label.
      *
      * @param label the label.
+     * @throws RemoteException the remote exception.
      */
     @Override
-    public void setLabel(String label) {
-        mu.writeLock().lock();
-        this.turnLabel.setText(label);
-        mu.writeLock().unlock();
+    public void setLabel(String label) throws RemoteException {
+        mu.lock();
+        lastMessageTime.set(System.currentTimeMillis());
+        turnLabel.setText(label);
+        mu.unlock();
     }
 
     /**
      * send message.
      *
      * @param message the message.
+     * @throws RemoteException the remote exception.
      */
     @Override
-    public void send(String message) {
-        mu.writeLock().lock();
+    public void send(String message) throws RemoteException {
+        mu.lock();
         textArea.append(message + "\n");
-        mu.writeLock().unlock();
+        mu.unlock();
     }
 
     /**
      * ask for a rematch.
+     *
+     * @throws RemoteException the remote exception.
      */
     @Override
-    public void ask() {
+    public void ask() throws RemoteException {
+        lastMessageTime.set(System.currentTimeMillis());
         SwingUtilities.invokeLater(() -> {
             JOptionPane pane = getjOptionPane();
 
@@ -129,9 +192,11 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
             String value = pane.getValue().toString();
             int delay = 500;
             if ("find".equals(value)) {
+                mu.lock();
                 for (int i = 0; i < 9; ++i) {
                     board[i].setText("");
                 }
+                mu.unlock();
                 try {
                     findingPlayer(delay, mu, turnLabel, service, username);
                 } catch (Exception e) {
@@ -166,37 +231,41 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     }
 
     @Override
-    public void setTimer(int timer) throws RemoteException {
-        mu.writeLock().lock();
+    public boolean setTimer(int timer, Long lastMessageTime) throws RemoteException {
+        mu.lock();
+        if (lastMessageTime != null && lastMessageTime != this.lastMessageTime.get()) {
+            mu.unlock();
+            return false;
+        }
         timerValue.setText(String.valueOf(timer));
-        mu.writeLock().unlock();
+        mu.unlock();
+        return true;
     }
 
-    public static void findingPlayer(int delay, ReadWriteLock mu, JLabel turnLabel, GameInterface service,
+    public static void findingPlayer(int delay, Lock mu, JLabel turnLabel, GameInterface service,
                                      String username) throws Exception {
-        mu.writeLock().lock();
+        mu.lock();
         turnLabel.setText("Finding Player");
-        mu.writeLock().unlock();
+        mu.unlock();
         Timer timer;
         ActionListener taskPerformer = new ActionListener() {
             private int dotCount = 0;
 
             public void actionPerformed(ActionEvent evt) {
-                mu.readLock().lock();
+                mu.lock();
                 if (!turnLabel.getText().startsWith("Finding Player")) {
                     ((Timer) (evt.getSource())).stop();
-                    mu.readLock().unlock();
+                    mu.unlock();
+                    System.out.println(turnLabel.getText() + " stop");
                     return;
                 }
-                mu.readLock().unlock();
                 dotCount++;
-                mu.writeLock().lock();
                 turnLabel.setText("Finding Player" + ".".repeat(Math.max(0, dotCount)));
                 // reset dotCount if it reaches 3
                 if (dotCount >= 3) {
                     dotCount = 0;
                 }
-                mu.writeLock().unlock();
+                mu.unlock();
             }
         };
 
