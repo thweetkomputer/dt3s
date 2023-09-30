@@ -171,9 +171,7 @@ public class Client {
         JButton quitButton = new JButton("QUIT");
         quitButton.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
         quitButton.setBackground(Color.WHITE);
-        quitButton.addActionListener(e -> {
-            exit(0);
-        });
+        quitButton.addActionListener(e -> exit(0));
         quitButton.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         quitButton.setBounds(20, 330, 100, 50); // x, y, width, height

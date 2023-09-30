@@ -182,7 +182,7 @@ public class Server {
         player2.setGame(game);
         lock.unlock();
         try {
-            client1.startGame(player1.getUsername(), System.currentTimeMillis(), game.getTurnLabel());
+            client1.startGame(player2.getUsername(), System.currentTimeMillis(), game.getTurnLabel());
         } catch (RemoteException e) {
             LOGGER.info("Start game for " + player1.getUsername() + " failed: " + e.getMessage());
             lock.lock();
@@ -193,7 +193,7 @@ public class Server {
             return;
         }
         try {
-            client2.startGame(player2.getUsername(), System.currentTimeMillis(), game.getTurnLabel());
+            client2.startGame(player1.getUsername(), System.currentTimeMillis(), game.getTurnLabel());
         } catch (RemoteException e) {
             LOGGER.info("Start game for " + player2.getUsername() + " failed: " + e.getMessage());
             lock.lock();

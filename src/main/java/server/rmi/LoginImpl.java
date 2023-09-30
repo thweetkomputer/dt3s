@@ -3,6 +3,7 @@ package server.rmi;
 
 import client.rmi.GameCallBackInterface;
 import common.Player;
+import exception.GameException;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -98,7 +99,13 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
     public void Logout(String username) throws RemoteException {
         lock.lock();
         freePlayers.remove(username);
-        playingPlayers.remove(username);
+        if (playingPlayers.get(username) != null) {
+            try {
+                playingPlayers.get(username).getGame().stop(username);
+            } catch (GameException e) {
+            }
+            playingPlayers.remove(username);
+        }
         lock.unlock();
         LOGGER.info("Player " + username + " logout.");
     }

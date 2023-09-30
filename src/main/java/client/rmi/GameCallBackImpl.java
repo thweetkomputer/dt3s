@@ -120,22 +120,7 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     @Override
     public void ask() {
         SwingUtilities.invokeLater(() -> {
-            JOptionPane pane = new JOptionPane();
-            pane.setMessageType(JOptionPane.QUESTION_MESSAGE);
-            pane.setOptionType(JOptionPane.YES_NO_OPTION);
-            JLabel label = new JLabel("Find next player?");
-            label.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
-            pane.setMessage(label);
-
-            JButton findButton = new JButton("find");
-            findButton.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
-            findButton.addActionListener(e -> pane.setValue("find"));
-
-            JButton quitButton = new JButton("quit");
-            quitButton.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
-            quitButton.addActionListener(e -> pane.setValue("quit"));
-
-            pane.setOptions(new Object[]{quitButton, findButton});
+            JOptionPane pane = getjOptionPane();
 
             JDialog dialog = pane.createDialog(null, "Choose an option");
             dialog.setIconImage(null);
@@ -158,6 +143,26 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
             }
         });
 
+    }
+
+    private static JOptionPane getjOptionPane() {
+        JOptionPane pane = new JOptionPane();
+        pane.setMessageType(JOptionPane.QUESTION_MESSAGE);
+        pane.setOptionType(JOptionPane.YES_NO_OPTION);
+        JLabel label = new JLabel("Find next player?");
+        label.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
+        pane.setMessage(label);
+
+        JButton findButton = new JButton("find");
+        findButton.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
+        findButton.addActionListener(e -> pane.setValue("find"));
+
+        JButton quitButton = new JButton("quit");
+        quitButton.setFont(new Font("Comic Sans MS", Font.PLAIN, 18));
+        quitButton.addActionListener(e -> pane.setValue("quit"));
+
+        pane.setOptions(new Object[]{quitButton, findButton});
+        return pane;
     }
 
     @Override
