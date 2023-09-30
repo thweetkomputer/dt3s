@@ -4,6 +4,7 @@ package server.rmi;
 import client.rmi.GameCallBackInterface;
 import common.Game;
 import common.Player;
+import exception.GameException;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -70,26 +71,21 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
      * @param y        the y position.
      */
     @Override
-    public String makeMove(String username, int x, int y) {
-        try {
-            lock.lock();
-            Player player = playingPlayers.get(username);
-            lock.unlock();
-            if (player == null) {
-                return "You are not in a game.";
-            }
-            Game game = player.getGame();
-            if (game == null) {
-                return "You are not in a game.";
-            }
-            if (!game.isMyTurn(username)) {
-                return "It's not your turn.";
-            }
-            game.move(x, y);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-            // TODO
+    public String makeMove(String username, int x, int y) throws GameException {
+        lock.lock();
+        Player player = playingPlayers.get(username);
+        lock.unlock();
+        if (player == null) {
+            return "You are not in a game.";
         }
+        Game game = player.getGame();
+        if (game == null) {
+            return "You are not in a game.";
+        }
+        if (!game.isMyTurn(username)) {
+            return "It's not your turn.";
+        }
+        game.move(x, y);
         return "OK";
     }
 
@@ -100,7 +96,7 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
      * @param message  the message.
      */
     @Override
-    public void sendMessage(String username, String message) {
+    public void sendMessage(String username, String message) throws GameException {
         lock.lock();
         try {
             Player player = playingPlayers.get(username);
@@ -112,11 +108,16 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
                 return;
             }
             message = player + ": " + message;
-            game.getClients()[0].send(message);
-            game.getClients()[1].send(message);
-        } catch (RemoteException e) {
-            e.printStackTrace();
-            // TODO
+            try {
+                game.getClients()[0].send(message);
+            } catch (Exception e) {
+                throw new GameException(game.getPlayers()[0].getUsername());
+            }
+            try {
+                game.getClients()[1].send(message);
+            } catch (Exception e) {
+                throw new GameException(game.getPlayers()[1].getUsername());
+            }
         } finally {
             lock.unlock();
         }

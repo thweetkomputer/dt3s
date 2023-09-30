@@ -4,6 +4,7 @@ package server;
 import client.rmi.GameCallBackInterface;
 import common.Game;
 import common.Player;
+import exception.GameException;
 import server.rmi.*;
 
 import java.net.MalformedURLException;
@@ -157,9 +158,11 @@ public class Server {
         lock.lock();
         playingPlayers.put(player1.getUsername(), player1);
         playingPlayers.put(player2.getUsername(), player2);
-        Player[] players;
+        Player[] players = new Player[]{player1, player2};
+        GameCallBackInterface client1 = gameClients.get(player1.getUsername());
+        GameCallBackInterface client2 = gameClients.get(player2.getUsername());
         String[] chess;
-        GameCallBackInterface[] clients;
+        GameCallBackInterface[] clients = new GameCallBackInterface[]{client1, client2};
         // random between 0 and 1
         int randomInt = random.nextInt(2);
         if (randomInt == 0) {
@@ -167,21 +170,13 @@ public class Server {
         } else {
             chess = new String[]{"O", "X"};
         }
-        GameCallBackInterface client1 = gameClients.get(player1.getUsername());
-        GameCallBackInterface client2 = gameClients.get(player2.getUsername());
-        randomInt = random.nextInt(2);
-        if (randomInt == 0) {
-            players = new Player[]{player1, player2};
-            clients = new GameCallBackInterface[]{client1, client2};
-        } else {
-            players = new Player[]{player2, player1};
-            clients = new GameCallBackInterface[]{client2, client1};
-        }
+        int turn = random.nextInt(2);
+        LOGGER.info("Turn: " + turn);
         game = new Game(new char[][]{
                 {' ', ' ', ' '},
                 {' ', ' ', ' '},
                 {' ', ' ', ' '}
-        }, 0, -1, 20, players, new String[]{player1.toString(), player2.toString()},
+        }, turn, -1, 20, players, new String[]{player1.toString(), player2.toString()},
                 playerList, chess, lock, clients, new ReentrantLock());
         player1.setGame(game);
         player2.setGame(game);
@@ -210,6 +205,10 @@ public class Server {
         }
         try {
             game.start();
+        } catch (GameException ge) {
+            LOGGER.info("Game exception:" + ge.getMessage());
+            String username = ge.getUsername();
+            // TODO add another to freePlayers
         } catch (Exception e) {
             e.printStackTrace();
             // TODO

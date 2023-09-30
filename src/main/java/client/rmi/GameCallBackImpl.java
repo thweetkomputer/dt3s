@@ -1,6 +1,8 @@
 // Chen Zhao 1427714
 package client.rmi;
 
+import common.Game;
+import exception.GameException;
 import lombok.Data;
 import server.rmi.GameInterface;
 

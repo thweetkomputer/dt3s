@@ -2,11 +2,11 @@
 package common;
 
 import client.rmi.GameCallBackInterface;
+import exception.GameException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.rmi.RemoteException;
 import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 
@@ -47,9 +47,9 @@ public class Game {
      *
      * @param x the x position.
      * @param y the y position.
-     * @throws RemoteException the remote exception.
+     * @throws GameException the game exception.
      */
-    public void move(int x, int y) throws RemoteException {
+    public void move(int x, int y) throws GameException {
         gameLock.lock();
         String turnLabel;
         board[x][y] = chess[turn].charAt(0);
@@ -59,8 +59,16 @@ public class Game {
             } else {
                 turnLabel = "Player " + players[winner].getUsername() + " wins!";
             }
-            clients[0].move(chess[turn], x, y, turnLabel);
-            clients[1].move(chess[turn], x, y, turnLabel);
+            try {
+                clients[0].move(chess[turn], x, y, turnLabel);
+            } catch (Exception e) {
+                throw new GameException(players[0].getUsername());
+            }
+            try {
+                clients[1].move(chess[turn], x, y, turnLabel);
+            } catch (Exception e) {
+                throw new GameException(players[1].getUsername());
+            }
             mu.lock();
             playerList.remove(players[0]);
             playerList.remove(players[1]);
@@ -79,14 +87,33 @@ public class Game {
             }
             mu.unlock();
             gameLock.unlock();
-            clients[0].ask();
-            clients[1].ask();
+            try {
+                clients[0].ask();
+            } catch (Exception e) {
+                throw new GameException(players[0].getUsername());
+            }
+            try {
+                clients[1].ask();
+            } catch (Exception e) {
+                throw new GameException(players[1].getUsername());
+            }
             return;
         }
         turn = 1 - turn;
+        timer = 20;
         turnLabel = getTurnLabel();
-        clients[0].move(chess[1 - turn], x, y, turnLabel);
-        clients[1].move(chess[1 - turn], x, y, turnLabel);
+        try {
+            clients[0].setTimer(timer);
+            clients[0].move(chess[1 - turn], x, y, turnLabel);
+        } catch (Exception e) {
+            throw new GameException(players[0].getUsername());
+        }
+        try {
+            clients[1].setTimer(timer);
+            clients[1].move(chess[1 - turn], x, y, turnLabel);
+        } catch (Exception e) {
+            throw new GameException(players[1].getUsername());
+        }
         gameLock.unlock();
     }
 
@@ -133,30 +160,45 @@ public class Game {
     /**
      * start the game.
      */
-    public void start() throws RemoteException {
-        // TODO
-        while (true) {
+    public void start() throws GameException {
+        while (!finished()) {
             var turn = getTurn();
             if (timer < 0) {
+                // TODO random choice
                 winner = 1 - turn;
                 mu.lock();
                 players[winner].win();
                 players[1 - winner].lose();
                 var turnLabel = "Player " + players[winner].getUsername() + " wins!";
-                clients[0].setLabel(turnLabel);
-                clients[1].setLabel(turnLabel);
+                try {
+                    clients[0].setLabel(turnLabel);
+                } catch (Exception e) {
+                    throw new GameException(players[0].getUsername());
+                }
+                try {
+                    clients[1].setLabel(turnLabel);
+                } catch (Exception e) {
+                    throw new GameException(players[1].getUsername());
+                }
                 mu.unlock();
                 break;
             }
-            while (timer >= 0) {
+            while (timer >= 0 && !finished()) {
                 try {
                     Thread.sleep(1000);
                 } catch (InterruptedException e) {
                 }
                 timer--;
-                // TODO check if the player is still online
-                clients[0].setTimer(timer);
-                clients[1].setTimer(timer);
+                try {
+                    clients[0].setTimer(timer);
+                } catch (Exception e) {
+                    throw new GameException(players[0].getUsername());
+                }
+                try {
+                    clients[1].setTimer(timer);
+                } catch (Exception e) {
+                    throw new GameException(players[1].getUsername());
+                }
             }
         }
     }

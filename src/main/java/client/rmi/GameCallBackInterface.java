@@ -1,6 +1,8 @@
 // Chen Zhao 1427714
 package client.rmi;
 
+import exception.GameException;
+
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 
