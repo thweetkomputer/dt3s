@@ -1,16 +1,12 @@
 // Chen Zhao 1427714
 package common;
 
-import client.rmi.GameCallBackInterface;
-import exception.GameException;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.rmi.RemoteException;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.logging.Logger;
@@ -69,9 +65,8 @@ public class Game {
      *
      * @param x the x position.
      * @param y the y position.
-     * @throws GameException the game exception.
      */
-    public void move(int x, int y) throws GameException {
+    public void move(int x, int y) {
         gameLock.lock();
         String turnLabel;
         board[x][y] = chess[turn].charAt(0);
@@ -97,9 +92,10 @@ public class Game {
         turnLabel = getTurnLabel();
         String turnName = players[turn].getUsername();
         try {
-            players[0].getClient().setTimer(timer, null);
             players[0].getClient().move(chess[1 - turn], x, y, turnName, turnLabel);
-            players[1].getClient().setTimer(timer, null);
+        } catch (Exception ignored) {
+        }
+        try {
             players[1].getClient().move(chess[1 - turn], x, y, turnName, turnLabel);
         } catch (Exception ignored) {
         }
@@ -159,7 +155,7 @@ public class Game {
      *
      * @param loser the loser.
      */
-    public void stop(String loser) throws GameException {
+    public void stop(String loser) {
         gameLock.lock();
         if (players[0].getUsername().equals(loser)) {
             winner = 1;
@@ -189,6 +185,9 @@ public class Game {
         var turnLabel = "Match Drawn";
         try {
             players[0].getClient().endGame(null, -1, -1, null, turnLabel);
+        } catch (Exception ignored) {
+        }
+        try {
             players[1].getClient().endGame(null, -1, -1, null, turnLabel);
         } catch (Exception ignored) {
         }

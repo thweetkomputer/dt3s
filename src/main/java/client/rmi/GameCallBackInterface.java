@@ -1,7 +1,6 @@
 // Chen Zhao 1427714
 package client.rmi;
 
-import exception.GameException;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -77,14 +76,4 @@ public interface GameCallBackInterface extends Remote {
      * @throws RemoteException the remote exception.
      */
     void endGame(String chess, int x, int y, String turn, String label) throws RemoteException;
-
-    /**
-     * set timer.
-     *
-     * @param timer           the timer.
-     * @param lastMessageTime the last message time.
-     * @return true if success, false if failed.
-     * @throws RemoteException the remote exception.
-     */
-    boolean setTimer(int timer, Long lastMessageTime) throws RemoteException;
 }

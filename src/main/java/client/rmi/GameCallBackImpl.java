@@ -7,8 +7,6 @@ import server.rmi.GameInterface;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
@@ -277,7 +275,6 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
         return pane;
     }
 
-    @Override
     public boolean setTimer(int timer, Long lastMessageTime) throws RemoteException {
         mu.lock();
         if (lastMessageTime != null && lastMessageTime != this.lastMessageTime.get()) {
@@ -292,6 +289,4 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
         mu.unlock();
         return true;
     }
-
-
 }

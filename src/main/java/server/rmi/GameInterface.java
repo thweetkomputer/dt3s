@@ -2,7 +2,6 @@
 package server.rmi;
 
 import client.rmi.GameCallBackInterface;
-import exception.GameException;
 
 import java.rmi.Remote;
 import java.rmi.RemoteException;
@@ -18,22 +17,25 @@ public interface GameInterface extends Remote {
      * @param x        the x position.
      * @param y        the y position.
      * @return the information, "OK" if success, others if failed.
+     * @throws RemoteException the remote exception.
      */
-    String makeMove(String username, int x, int y) throws RemoteException, GameException;
+    String makeMove(String username, int x, int y) throws RemoteException;
 
     /**
      * send message.
      *
      * @param username the username.
      * @param message  the message.
+     * @throws RemoteException the remote exception.
      */
-    void sendMessage(String username, String message) throws RemoteException, GameException;
+    void sendMessage(String username, String message) throws RemoteException;
 
     /**
      * find a game.
      *
      * @param username the username.
      * @param client   the client.
+     * @throws RemoteException the remote exception.
      */
     void findGame(String username, GameCallBackInterface client) throws RemoteException;
 

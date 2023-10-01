@@ -1,27 +1,24 @@
 // Chen Zhao 1427714
 package server;
 
-import client.rmi.GameCallBackInterface;
-import common.Game;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
 import common.MyReentrantLock;
 import common.Player;
-import exception.GameException;
 import server.rmi.*;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.rmi.Naming;
 import java.rmi.Remote;
 import java.rmi.RemoteException;
 import java.rmi.registry.LocateRegistry;
 import java.util.HashMap;
-import java.util.Random;
 import java.util.TreeSet;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
 
 /**
@@ -30,8 +27,8 @@ import java.util.logging.Logger;
 public class Server {
     private static final Logger LOGGER = Logger.getLogger(GameImpl.class.getName());
 
-    private String ip;
-    private int port;
+    private final String ip;
+    private final int port;
 
     public Server(String ip, int port) {
         this.ip = ip;
@@ -55,10 +52,6 @@ public class Server {
      */
     private final HashMap<String, Player> playingPlayers = new HashMap<>();
     /**
-     * clients.
-     */
-    private final HashMap<String, GameCallBackInterface> gameClients = new HashMap<>();
-    /**
      * lock.
      */
     private final Lock lock = new MyReentrantLock();
@@ -70,6 +63,27 @@ public class Server {
         startServices();
 
         LOGGER.info("Server starting ...");
+
+        try {
+            HttpServer server = HttpServer.create(new InetSocketAddress(8080), 0);
+
+            server.createContext("/", exchange -> {
+                StringBuilder response = new StringBuilder();
+                lock.lock();
+                for (Player player : playerList) {
+                    response.append(player.getUsername()).append(" ").append(player.getScore()).append("\n");
+                }
+                lock.unlock();
+
+                exchange.sendResponseHeaders(200, response.length());
+                OutputStream os = exchange.getResponseBody();
+                os.write(response.toString().getBytes());
+                os.close();
+            });
+
+            server.start();
+        } catch (IOException ignored) {
+        }
     }
 
 
@@ -85,17 +99,17 @@ public class Server {
     private void startServices() {
         try {
             GameInterface gameService = new GameImpl(players, playerList, freePlayers, playingPlayers, lock);
-            registerService(gameService, "game");
+            registerService(gameService);
         } catch (RemoteException | MalformedURLException e) {
             LOGGER.info("Server register service failed: " + e.getMessage());
             System.exit(1);
         }
     }
 
-    private void registerService(Remote service, String serviceName) throws RemoteException, MalformedURLException {
-        String url = String.format("rmi://%s:%d/%s", ip, port, serviceName);
+    private void registerService(Remote service) throws RemoteException, MalformedURLException {
+        String url = String.format("rmi://%s:%d/%s", ip, port, "game");
         Naming.rebind(url, service);
-        System.out.println("Service " + serviceName + " bound to " + url);
+        System.out.println("Service " + "game" + " bound to " + url);
     }
 
 

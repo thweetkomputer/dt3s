@@ -4,19 +4,15 @@ package server.rmi;
 import client.rmi.GameCallBackInterface;
 import common.Game;
 import common.Player;
-import exception.GameException;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.HashMap;
 import java.util.Random;
-import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.locks.Condition;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.logging.Logger;
@@ -80,7 +76,7 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
      * @throws RemoteException the remote exception.
      */
     @Override
-    public String makeMove(String username, int x, int y) throws RemoteException, GameException {
+    public String makeMove(String username, int x, int y) throws RemoteException{
         lock.lock();
         Player player = playingPlayers.get(username);
         lock.unlock();
@@ -107,10 +103,9 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
      * @param username the username.
      * @param message  the message.
      * @throws RemoteException the remote exception.
-     * @throws GameException   the game exception.
      */
     @Override
-    public void sendMessage(String username, String message) throws RemoteException, GameException {
+    public void sendMessage(String username, String message) throws RemoteException{
         lock.lock();
         Player player = playingPlayers.get(username);
         if (player == null) {
@@ -173,13 +168,12 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
     @Override
     public void quit(String username) throws RemoteException {
         lock.lock();
-        LOGGER.info("Player " + username + " logout.");
         freePlayers.remove(username);
         if (playingPlayers.get(username) != null) {
             try {
                 LOGGER.info("Player " + username + " stop game.");
                 playingPlayers.get(username).getGame().stop(username);
-            } catch (GameException ignored) {
+            } catch (Exception ignored) {
             }
             playingPlayers.remove(username);
         }
