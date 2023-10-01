@@ -66,6 +66,7 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
     public void Login(String username,
                       GameCallBackInterface gameClient) throws RemoteException {
         lock.lock();
+        // check if in the game, resume the game
         if (players.containsKey(username)) {
             Player player = players.get(username);
             gameClients.put(username, gameClient);

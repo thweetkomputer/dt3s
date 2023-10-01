@@ -4,7 +4,6 @@ package client;
 import client.rmi.GameCallBackImpl;
 import client.rmi.GameCallBackInterface;
 import common.MemoryTextArea;
-import common.MyReentrantLock;
 import common.PlaceholderTextField;
 import server.rmi.GameInterface;
 import server.rmi.LoginInterface;
@@ -16,9 +15,7 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
-import java.util.concurrent.locks.ReadWriteLock;
 import java.util.concurrent.locks.ReentrantLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.logging.Logger;
 
 import static java.lang.System.exit;

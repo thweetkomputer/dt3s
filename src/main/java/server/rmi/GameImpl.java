@@ -108,6 +108,7 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
                 return;
             }
             message = player + ": " + message;
+            // TODO collect fail clients
             try {
                 game.getClients()[0].send(message);
             } catch (Exception e) {
