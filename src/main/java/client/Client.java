@@ -96,9 +96,11 @@ public class Client {
 
             loginService.Login(username, gameCallBackInterface);
             System.err.println("Login success.");
+            // TODO if not in game
             GameCallBackImpl.findingPlayer(500, mu, turnLabel, gameService, username);
         } catch (Exception e) {
             System.err.println("Client exception: " + e);
+            e.printStackTrace();
             if (loginService != null) {
                 try {
                     loginService.Logout(username);

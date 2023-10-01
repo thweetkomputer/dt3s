@@ -95,9 +95,11 @@ public class LoginImpl extends UnicastRemoteObject implements LoginInterface {
     @Override
     public void Logout(String username) throws RemoteException {
         lock.lock();
+        LOGGER.info("Player " + username + " logout.");
         freePlayers.remove(username);
         if (playingPlayers.get(username) != null) {
             try {
+                LOGGER.info("Player " + username + " stop game.");
                 playingPlayers.get(username).getGame().stop(username);
             } catch (GameException ignored) {
             }

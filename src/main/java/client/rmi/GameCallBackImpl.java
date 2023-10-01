@@ -62,14 +62,14 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     /**
      * start the game.
      *
-     * @param opponent    the opponent.
-     * @param turn        the turn.
-     * @param label       the label.
+     * @param opponent the opponent.
+     * @param turn     the turn.
+     * @param label    the label.
      * @throws RemoteException the remote exception.
      */
     @Override
     public void startGame(String opponent, String turn, String label) throws RemoteException {
-        System.out.println("start game with " + opponent);
+        LOGGER.info("start game with " + opponent);
         mu.lock();
         turnLabel.setText(label);
         lastMessageTime.set(System.currentTimeMillis());
@@ -99,16 +99,20 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
         startTimer(lastMessageTime, turn);
     }
 
+    /**
+     * start timer.
+     *
+     * @param lastMessageTime the last message time.
+     * @param turn            the turn.
+     */
     public void startTimer(long lastMessageTime, String turn) {
         // start timer
         new Thread(() -> {
             var timer = 20;
-            LOGGER.info("Start timer");
             while (true) {
                 try {
                     Thread.sleep(1000);
-                } catch (InterruptedException e) {
-                    LOGGER.info("Timer interrupted");
+                } catch (InterruptedException ignored) {
                 }
                 if (timer == 0) {
                     if (username.equals(turn)) {
@@ -137,11 +141,9 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
                 }
                 try {
                     if (!setTimer(timer--, lastMessageTime)) {
-                        LOGGER.info("Set timer failed");
                         return;
                     }
-                } catch (Exception exception) {
-                    LOGGER.info("Set timer failed: " + exception.getMessage());
+                } catch (Exception ignored) {
                 }
             }
         }).start();
@@ -199,9 +201,9 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
                 mu.unlock();
                 try {
                     findingPlayer(delay, mu, turnLabel, service, username);
-                } catch (Exception e) {
-                    throw new RuntimeException(e);
+                } catch (RemoteException e) {
                     // TODO
+                    throw new RuntimeException(e);
                 }
             } else if ("quit".equals(value)) {
                 System.exit(0);
@@ -243,7 +245,7 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     }
 
     public static void findingPlayer(int delay, Lock mu, JLabel turnLabel, GameInterface service,
-                                     String username) throws Exception {
+                                     String username) throws RemoteException {
         mu.lock();
         turnLabel.setText("Finding Player");
         mu.unlock();
@@ -256,7 +258,6 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
                 if (!turnLabel.getText().startsWith("Finding Player")) {
                     ((Timer) (evt.getSource())).stop();
                     mu.unlock();
-                    System.out.println(turnLabel.getText() + " stop");
                     return;
                 }
                 dotCount++;

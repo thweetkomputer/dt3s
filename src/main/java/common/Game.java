@@ -7,6 +7,9 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.locks.Lock;
 import java.util.logging.Logger;
@@ -33,6 +36,8 @@ public class Game {
     private GameCallBackInterface[] clients;
     private Lock gameLock;
 
+    private HashMap<String, Player> playingPlayers;
+
     /**
      * the constructor.
      *
@@ -41,6 +46,19 @@ public class Game {
     public boolean isMyTurn(String username) {
         gameLock.lock();
         var result = players[getTurn()].getUsername().equals(username);
+        gameLock.unlock();
+        return result;
+    }
+
+    /**
+     * check if the move is valid.
+     * @param x the x position.
+     * @param y the y position.
+     * @return true if valid, false otherwise.
+     */
+    public boolean isValidMove(int x, int y) {
+        gameLock.lock();
+        var result = board[x][y] == ' ';
         gameLock.unlock();
         return result;
     }
@@ -64,30 +82,22 @@ public class Game {
                 turnLabel = "Player " + winnerName + " wins!";
             }
             reRank();
-            gameLock.unlock();
+            List<String> failClients = new ArrayList<>();
             try {
                 clients[0].move(chess[turn], x, y, null, turnLabel);
+                clients[0].ask();
             } catch (Exception e) {
-                gameLock.unlock();
-                throw new GameException(players[0].getUsername());
+                failClients.add(players[0].getUsername());
             }
             try {
                 clients[1].move(chess[turn], x, y, null, turnLabel);
-            } catch (Exception e) {
-                gameLock.unlock();
-                throw new GameException(players[1].getUsername());
-            }
-            try {
-                clients[0].ask();
-            } catch (Exception e) {
-                gameLock.unlock();
-                throw new GameException(players[0].getUsername());
-            }
-            try {
                 clients[1].ask();
             } catch (Exception e) {
-                gameLock.unlock();
-                throw new GameException(players[1].getUsername());
+                failClients.add(players[1].getUsername());
+            }
+            gameLock.unlock();
+            if (!failClients.isEmpty()) {
+                throw new GameException(failClients.toArray(new String[0]));
             }
             return;
         }
@@ -95,19 +105,24 @@ public class Game {
         timer = 20;
         turnLabel = getTurnLabel();
         String turnName = players[turn].getUsername();
+        List<String> failClients = new ArrayList<>();
         try {
             clients[0].setTimer(timer, null);
             clients[0].move(chess[1 - turn], x, y, turnName, turnLabel);
         } catch (Exception e) {
-            throw new GameException(players[0].getUsername());
+            failClients.add(players[0].getUsername());
         }
         try {
             clients[1].setTimer(timer, null);
             clients[1].move(chess[1 - turn], x, y, turnName, turnLabel);
         } catch (Exception e) {
-            throw new GameException(players[1].getUsername());
+            failClients.add(players[1].getUsername());
         }
         gameLock.unlock();
+        if (!failClients.isEmpty()) {
+            throw new GameException(failClients.toArray(new String[0]));
+        }
+
     }
 
     public String getTurnLabel() {
@@ -120,42 +135,37 @@ public class Game {
      * @return true if finished, false otherwise.
      */
     public boolean finished() {
-        gameLock.lock();
-        try {
-            if (winner != -1) {
-                return true;
-            }
-            var turn = getTurn();
-            for (int i = 0; i < 3; ++i) {
-                if (board[i][0] != ' ' && board[i][0] == board[i][1] && board[i][1] == board[i][2]) {
-                    winner = turn;
-                    return true;
-                }
-                if (board[0][i] != ' ' && board[0][i] == board[1][i] && board[1][i] == board[2][i]) {
-                    winner = turn;
-                    return true;
-                }
-            }
-            if (board[0][0] != ' ' && board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
-                winner = turn;
-                return true;
-            }
-            if (board[0][2] != ' ' && board[0][2] == board[1][1] && board[1][1] == board[2][0]) {
-                winner = turn;
-                return true;
-            }
-            for (int i = 0; i < 3; ++i) {
-                for (int j = 0; j < 3; ++j) {
-                    if (board[j][i] == ' ') {
-                        return false;
-                    }
-                }
-            }
-            winner = -1;
+        if (winner != -1) {
             return true;
-        } finally {
-            gameLock.unlock();
         }
+        var turn = getTurn();
+        for (int i = 0; i < 3; ++i) {
+            if (board[i][0] != ' ' && board[i][0] == board[i][1] && board[i][1] == board[i][2]) {
+                winner = turn;
+                return true;
+            }
+            if (board[0][i] != ' ' && board[0][i] == board[1][i] && board[1][i] == board[2][i]) {
+                winner = turn;
+                return true;
+            }
+        }
+        if (board[0][0] != ' ' && board[0][0] == board[1][1] && board[1][1] == board[2][2]) {
+            winner = turn;
+            return true;
+        }
+        if (board[0][2] != ' ' && board[0][2] == board[1][1] && board[1][1] == board[2][0]) {
+            winner = turn;
+            return true;
+        }
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                if (board[j][i] == ' ') {
+                    return false;
+                }
+            }
+        }
+        winner = -1;
+        return true;
     }
 
 
@@ -189,6 +199,9 @@ public class Game {
     }
 
     private void reRank() {
+        mu.lock();
+        playingPlayers.remove(players[0].getUsername());
+        playingPlayers.remove(players[1].getUsername());
         players[0].setGame(null);
         players[1].setGame(null);
         playerList.remove(players[0]);
@@ -206,5 +219,7 @@ public class Game {
         for (Player player : playerList) {
             player.rank = rank++;
         }
+
+        mu.unlock();
     }
 }
