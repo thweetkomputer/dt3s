@@ -6,13 +6,17 @@ import client.rmi.GameCallBackInterface;
 import common.MemoryTextArea;
 import common.PlaceholderTextField;
 import server.rmi.GameInterface;
-import server.rmi.LoginInterface;
 
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.net.MalformedURLException;
+import java.rmi.NotBoundException;
+import java.rmi.RemoteException;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
@@ -30,7 +34,6 @@ public class Client {
     private final int port;
     private final AtomicLong lastMessageTime = new AtomicLong(0);
 
-    LoginInterface loginService;
     GameInterface gameService;
     private final Lock mu = new ReentrantLock();
     private final JLabel turnLabel = new JLabel();
@@ -73,7 +76,6 @@ public class Client {
         System.out.println("UI created.");
         System.out.println("Connecting to server...");
         try {
-            loginService = (LoginInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/login");
             gameService = (GameInterface) java.rmi.Naming.lookup("rmi://" + ip + ":" + port + "/game");
 
             // bind click
@@ -85,38 +87,38 @@ public class Client {
                         if (!"OK".equals(gameService.makeMove(username, finalI / 3, finalI % 3))) {
                             LOGGER.info("Make move failed: " + username);
                         }
-                    } catch (Exception exception) {
-                        LOGGER.info("Make move failed: " + exception.getMessage());
+                    } catch (Exception ignored) {
                     }
                 });
             }
 
             GameCallBackInterface gameCallBackInterface = new GameCallBackImpl(mu, lastMessageTime, boards, turnLabel,
-                    chatTextArea, timerValue, gameService, username);
+                    chatTextArea, timerValue, gameService, username, this);
 
-            loginService.Login(username, gameCallBackInterface);
-            System.err.println("Login success.");
-            // TODO if not in game
-            GameCallBackImpl.findingPlayer(500, mu, turnLabel, gameService, username);
-        } catch (Exception e) {
-            System.err.println("Client exception: " + e);
-            e.printStackTrace();
-            if (loginService != null) {
-                try {
-                    loginService.Logout(username);
-                } catch (Exception ignored) {
-                }
-            }
-            exit(0);
+            findingPlayer(500, mu, turnLabel);
+            gameService.findGame(username, gameCallBackInterface);
+        } catch (RemoteException | NotBoundException | MalformedURLException ignored) {
         }
 
-        LoginInterface finalLoginService = loginService;
+        GameInterface finalGameService = gameService;
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             try {
-                finalLoginService.Logout(username);
+                finalGameService.quit(username);
             } catch (Exception ignored) {
             }
         }));
+
+        while (true) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException ignored) {
+            }
+            try {
+                gameService.heartbeat();
+            } catch (Exception e) {
+                gracefulExit();
+            }
+        }
     }
 
     private void createAndShowGUI() throws Exception {
@@ -132,9 +134,10 @@ public class Client {
 
         frame.setVisible(true);
 
+
     }
 
-    private void startGame(JFrame frame) throws Exception {
+    private void startGame(JFrame frame) {
         frame.getContentPane().removeAll();
         frame.repaint();
         frame.revalidate();
@@ -266,7 +269,6 @@ public class Client {
         mainPanel.add(chatPanel);
 
         frame.add(mainPanel);
-        frame.setVisible(true);
     }
 
     private JTextField getjTextField() {
@@ -278,8 +280,7 @@ public class Client {
             if (!message.trim().isEmpty()) {
                 try {
                     gameService.sendMessage(username, message);
-                } catch (Exception exception) {
-                    exception.printStackTrace();
+                } catch (Exception ignored) {
                 }
                 chatInputField.setText("");
             }
@@ -291,5 +292,43 @@ public class Client {
         chatInputField.setMinimumSize(dim);
         chatInputField.setMaximumSize(dim);
         return chatInputField;
+    }
+
+    public void findingPlayer(int delay, Lock mu, JLabel turnLabel) {
+        mu.lock();
+        turnLabel.setText("Finding Player");
+        mu.unlock();
+        Timer timer;
+        ActionListener taskPerformer = new ActionListener() {
+            private int dotCount = 0;
+
+            public void actionPerformed(ActionEvent evt) {
+                mu.lock();
+                if (!turnLabel.getText().startsWith("Finding Player")) {
+                    ((Timer) (evt.getSource())).stop();
+                    mu.unlock();
+                    return;
+                }
+                dotCount++;
+                turnLabel.setText("Finding Player" + ".".repeat(Math.max(0, dotCount)));
+                // reset dotCount if it reaches 3
+                if (dotCount >= 3) {
+                    dotCount = 0;
+                }
+                mu.unlock();
+            }
+        };
+
+        timer = new Timer(delay, taskPerformer);
+        timer.start();
+    }
+
+    public void gracefulExit() {
+        turnLabel.setText("Server unavailable");
+        try {
+            Thread.sleep(5000);
+        } catch (InterruptedException ignored) {
+        }
+        System.exit(0);
     }
 }

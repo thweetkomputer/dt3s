@@ -33,6 +33,20 @@ public interface GameInterface extends Remote {
      * find a game.
      *
      * @param username the username.
+     * @param client   the client.
      */
-    void findGame(String username) throws RemoteException;
+    void findGame(String username, GameCallBackInterface client) throws RemoteException;
+
+    /**
+     * quit a game.
+     *
+     * @param username the username.
+     * @throws RemoteException the remote exception.
+     */
+    void quit(String username) throws RemoteException;
+
+    /**
+     * heartbeat.
+     */
+    void heartbeat() throws RemoteException;
 }

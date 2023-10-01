@@ -1,6 +1,7 @@
 // Chen Zhao 1427714
 package client.rmi;
 
+import client.Client;
 import lombok.Data;
 import server.rmi.GameInterface;
 
@@ -28,12 +29,15 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     private JButton[] board = null;
     private JTextArea textArea = null;
     private JLabel timerValue = null;
+    private JDialog disconnectedDialog = null;
 
     private Lock mu = null;
 
     private GameInterface service = null;
 
     private String username = null;
+
+    private Client client = null;
 
 
     /**
@@ -47,7 +51,8 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
      * the constructor.
      */
     public GameCallBackImpl(Lock mu, AtomicLong lastMessageTime, JButton[] board, JLabel turnLabel,
-                            JTextArea textArea, JLabel timerValue, GameInterface service, String username) throws Exception {
+                            JTextArea textArea, JLabel timerValue, GameInterface service, String username,
+                            Client client) throws RemoteException {
         super();
         this.mu = mu;
         this.lastMessageTime = lastMessageTime;
@@ -57,6 +62,7 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
         this.timerValue = timerValue;
         this.service = service;
         this.username = username;
+        this.client = client;
     }
 
     /**
@@ -99,6 +105,46 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
         startTimer(lastMessageTime, turn);
     }
 
+    @Override
+    public void endGame(String chess, int x, int y, String turn, String label) throws RemoteException {
+        mu.lock();
+        if (chess != null) {
+            board[x * 3 + y].setText(chess);
+        }
+        turnLabel.setText(label);
+        lastMessageTime.set(System.currentTimeMillis());
+        mu.unlock();
+        ask();
+    }
+
+    /**
+     * continue
+     *
+     * @param board the board.
+     * @param turn  the turn.
+     * @param label the label.
+     * @throws RemoteException the remote exception.
+     */
+    @Override
+    public void continueGame(char[][] board, String turn, String label) throws RemoteException {
+        mu.lock();
+        for (int i = 0; i < 9; ++i) {
+            this.board[i].setText(String.valueOf(board[i / 3][i % 3]));
+        }
+        turnLabel.setText(label);
+        lastMessageTime.set(System.currentTimeMillis());
+        var lastMessageTime = this.lastMessageTime.get();
+        mu.unlock();
+        startTimer(lastMessageTime, turn);
+    }
+
+    /**
+     * heartbeat.
+     */
+    @Override
+    public void heartbeat() {
+    }
+
     /**
      * start timer.
      *
@@ -106,6 +152,12 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
      * @param turn            the turn.
      */
     public void startTimer(long lastMessageTime, String turn) {
+        if (!turn.equals(username)) {
+            mu.lock();
+            timerValue.setText("20");
+            mu.unlock();
+            return;
+        }
         // start timer
         new Thread(() -> {
             var timer = 20;
@@ -115,28 +167,26 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
                 } catch (InterruptedException ignored) {
                 }
                 if (timer == 0) {
-                    if (username.equals(turn)) {
-                        // random choice
-                        java.util.List<Integer> available = new ArrayList<>();
-                        mu.lock();
-                        for (int i = 0; i < 9; ++i) {
-                            if (board[i].getText().isEmpty()) {
-                                available.add(i);
-                            }
+                    // random choice
+                    java.util.List<Integer> available = new ArrayList<>();
+                    mu.lock();
+                    for (int i = 0; i < 9; ++i) {
+                        if (board[i].getText().isEmpty()) {
+                            available.add(i);
                         }
-                        mu.unlock();
-                        if (available.isEmpty()) {
-                            continue;
-                        }
-                        int random = (int) (Math.random() * available.size());
-                        int index = available.get(random);
-                        int x1 = index / 3;
-                        int y1 = index % 3;
-                        try {
-                            service.makeMove(username, x1, y1);
-                        } catch (Exception e) {
-                            LOGGER.info("Make move failed: " + e.getMessage());
-                        }
+                    }
+                    mu.unlock();
+                    if (available.isEmpty()) {
+                        continue;
+                    }
+                    int random = (int) (Math.random() * available.size());
+                    int index = available.get(random);
+                    int x1 = index / 3;
+                    int y1 = index % 3;
+                    try {
+                        service.makeMove(username, x1, y1);
+                    } catch (Exception e) {
+                        LOGGER.info("Make move failed: " + e.getMessage());
                     }
                 }
                 try {
@@ -152,13 +202,16 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
     /**
      * set label.
      *
-     * @param label the label.
+     * @param label      the label.
+     * @param resetTimer whether reset timer.
      * @throws RemoteException the remote exception.
      */
     @Override
-    public void setLabel(String label) throws RemoteException {
+    public void setLabel(String label, boolean resetTimer) throws RemoteException {
         mu.lock();
-        lastMessageTime.set(System.currentTimeMillis());
+        if (resetTimer) {
+            lastMessageTime.set(System.currentTimeMillis());
+        }
         turnLabel.setText(label);
         mu.unlock();
     }
@@ -176,13 +229,7 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
         mu.unlock();
     }
 
-    /**
-     * ask for a rematch.
-     *
-     * @throws RemoteException the remote exception.
-     */
-    @Override
-    public void ask() throws RemoteException {
+    public void ask() {
         lastMessageTime.set(System.currentTimeMillis());
         SwingUtilities.invokeLater(() -> {
             JOptionPane pane = getjOptionPane();
@@ -199,17 +246,15 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
                     board[i].setText("");
                 }
                 mu.unlock();
+                client.findingPlayer(delay, mu, turnLabel);
                 try {
-                    findingPlayer(delay, mu, turnLabel, service, username);
-                } catch (RemoteException e) {
-                    // TODO
-                    throw new RuntimeException(e);
+                    service.findGame(username, this);
+                } catch (RemoteException ignored) {
                 }
             } else if ("quit".equals(value)) {
                 System.exit(0);
             }
         });
-
     }
 
     private static JOptionPane getjOptionPane() {
@@ -239,39 +284,14 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
             mu.unlock();
             return false;
         }
+        if (timer < 0) {
+            mu.unlock();
+            return false;
+        }
         timerValue.setText(String.valueOf(timer));
         mu.unlock();
         return true;
     }
 
-    public static void findingPlayer(int delay, Lock mu, JLabel turnLabel, GameInterface service,
-                                     String username) throws RemoteException {
-        mu.lock();
-        turnLabel.setText("Finding Player");
-        mu.unlock();
-        Timer timer;
-        ActionListener taskPerformer = new ActionListener() {
-            private int dotCount = 0;
 
-            public void actionPerformed(ActionEvent evt) {
-                mu.lock();
-                if (!turnLabel.getText().startsWith("Finding Player")) {
-                    ((Timer) (evt.getSource())).stop();
-                    mu.unlock();
-                    return;
-                }
-                dotCount++;
-                turnLabel.setText("Finding Player" + ".".repeat(Math.max(0, dotCount)));
-                // reset dotCount if it reaches 3
-                if (dotCount >= 3) {
-                    dotCount = 0;
-                }
-                mu.unlock();
-            }
-        };
-
-        timer = new Timer(delay, taskPerformer);
-        timer.start();
-        service.findGame(username);
-    }
 }

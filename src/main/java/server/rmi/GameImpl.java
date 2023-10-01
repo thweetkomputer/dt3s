@@ -27,8 +27,6 @@ import java.util.logging.Logger;
 public class GameImpl extends UnicastRemoteObject implements GameInterface {
     private static final Logger LOGGER = Logger.getLogger(GameImpl.class.getName());
 
-    private HashMap<String, GameCallBackInterface> clients;
-
     private HashMap<String, Player> allPlayers;
     private TreeSet<Player> playerList;
     private HashMap<String, Player> freePlayers;
@@ -63,14 +61,12 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
                     TreeSet<Player> playerList,
                     HashMap<String, Player> freePlayers,
                     HashMap<String, Player> playingPlayers,
-                    HashMap<String, GameCallBackInterface> clients,
                     Lock lock) throws RemoteException {
         super();
         this.allPlayers = players;
         this.playerList = playerList;
         this.freePlayers = freePlayers;
         this.playingPlayers = playingPlayers;
-        this.clients = clients;
         this.lock = lock;
     }
 
@@ -116,30 +112,21 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
     @Override
     public void sendMessage(String username, String message) throws RemoteException, GameException {
         lock.lock();
-        try {
-            Player player = playingPlayers.get(username);
-            if (player == null) {
-                return;
-            }
-            Game game = player.getGame();
-            if (game == null) {
-                return;
-            }
-            message = player + ": " + message;
-            // TODO collect fail clients
-            try {
-                game.getClients()[0].send(message);
-            } catch (Exception e) {
-                throw new GameException(game.getPlayers()[0].getUsername());
-            }
-            try {
-                game.getClients()[1].send(message);
-            } catch (Exception e) {
-                throw new GameException(game.getPlayers()[1].getUsername());
-            }
-        } finally {
-            lock.unlock();
+        Player player = playingPlayers.get(username);
+        if (player == null) {
+            return;
         }
+        Game game = player.getGame();
+        if (game == null) {
+            return;
+        }
+        message = player + ": " + message;
+        try {
+            game.getPlayers()[0].getClient().send(message);
+            game.getPlayers()[1].getClient().send(message);
+        } catch (Exception ignored) {
+        }
+        lock.unlock();
     }
 
     /**
@@ -148,50 +135,74 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
      * @param username the username.
      */
     @Override
-    public void findGame(String username) throws RemoteException {
+    public void findGame(String username, GameCallBackInterface client) throws RemoteException {
+        Player player = allPlayers.get(username);
         lock.lock();
-        try {
-            Player player = allPlayers.get(username);
-            if (player == null) {
-                return;
-            }
-            if (playingPlayers.containsKey(username) && playingPlayers.get(username).getGame() != null) {
-                // continue game
-                GameCallBackInterface client = clients.get(username);
-                LOGGER.info("Player " + username + " is continuing a game.");
-//                client.continueGame(); // TODO
-            } else {
-                freePlayers.put(username, player);
-                LOGGER.info("Player " + username + " is looking for a game.");
-                if (freePlayers.size() > 1) {
-                    Player player1 = freePlayers.values().iterator().next();
-                    freePlayers.remove(player1.getUsername());
-                    Player player2 = freePlayers.values().iterator().next();
-                    freePlayers.remove(player2.getUsername());
-                    playingPlayers.put(player1.getUsername(), player1);
-                    playingPlayers.put(player2.getUsername(), player2);
-                    // start game
-                    executor.execute(() -> startGame(player1, player2));
-                }
-            }
-        } finally {
-            lock.unlock();
+        if (player == null) {
+            player = new Player(username, allPlayers.size() + 1, System.currentTimeMillis(), client);
+            allPlayers.put(username, player);
+            playerList.add(player);
+        } else {
+            player.setClient(client);
         }
+        if (playingPlayers.containsKey(username)) {
+            lock.unlock();
+            return;
+        }
+        freePlayers.put(username, player);
+        if (freePlayers.size() > 1) {
+            Player player1 = freePlayers.values().iterator().next();
+            freePlayers.remove(player1.getUsername());
+            Player player2 = freePlayers.values().iterator().next();
+            freePlayers.remove(player2.getUsername());
+            playingPlayers.put(player1.getUsername(), player1);
+            playingPlayers.put(player2.getUsername(), player2);
+            // start game
+            LOGGER.info("Start game " + player1.getUsername() + " vs " + player2.getUsername() + ".");
+            executor.execute(() -> startGame(player1, player2));
+        }
+        lock.unlock();
+    }
+
+    /**
+     * quit a game.
+     *
+     * @param username the username.
+     * @throws RemoteException the remote exception.
+     */
+    @Override
+    public void quit(String username) throws RemoteException {
+        lock.lock();
+        LOGGER.info("Player " + username + " logout.");
+        freePlayers.remove(username);
+        if (playingPlayers.get(username) != null) {
+            try {
+                LOGGER.info("Player " + username + " stop game.");
+                playingPlayers.get(username).getGame().stop(username);
+            } catch (GameException ignored) {
+            }
+            playingPlayers.remove(username);
+        }
+        lock.unlock();
+        LOGGER.info("Player " + username + " logout.");
+    }
+
+    /**
+     * heartbeat.
+     */
+    @Override
+    public void heartbeat() throws RemoteException {
     }
 
     private void startGame(Player player1, Player player2) {
         // start game
-        // TODO: in case player1 or player2 is offline
         Game game;
         lock.lock();
         LOGGER.info("Start game between " + player1.getUsername() + " and " + player2.getUsername() + ".");
         playingPlayers.put(player1.getUsername(), player1);
         playingPlayers.put(player2.getUsername(), player2);
         Player[] players = new Player[]{player1, player2};
-        GameCallBackInterface client1 = clients.get(player1.getUsername());
-        GameCallBackInterface client2 = clients.get(player2.getUsername());
         String[] chess;
-        GameCallBackInterface[] clients = new GameCallBackInterface[]{client1, client2};
         // random between 0 and 1
         int randomInt = random.nextInt(2);
         if (randomInt == 0) {
@@ -206,12 +217,12 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
                 {' ', ' ', ' '},
                 {' ', ' ', ' '}
         }, turn, -1, 20, players, new String[]{player1.toString(), player2.toString()},
-                playerList, chess, lock, clients, new ReentrantLock(), playingPlayers);
+                playerList, chess, lock, new ReentrantLock(), playingPlayers);
         player1.setGame(game);
         player2.setGame(game);
         lock.unlock();
         try {
-            client1.startGame(player2.getUsername(), players[turn].getUsername(), game.getTurnLabel());
+            player1.getClient().startGame(player2.getUsername(), players[turn].getUsername(), game.getTurnLabel());
         } catch (RemoteException e) {
             LOGGER.info("Start game for " + player1.getUsername() + " failed: " + e.getMessage());
             lock.lock();
@@ -222,7 +233,7 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
             return;
         }
         try {
-            client2.startGame(player1.getUsername(), players[turn].getUsername(), game.getTurnLabel());
+            player2.getClient().startGame(player1.getUsername(), players[turn].getUsername(), game.getTurnLabel());
         } catch (RemoteException e) {
             LOGGER.info("Start game for " + player2.getUsername() + " failed: " + e.getMessage());
             lock.lock();
@@ -232,6 +243,7 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
             lock.unlock();
             return;
         }
+        game.heartbeat();
     }
 
 }

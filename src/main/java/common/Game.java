@@ -7,6 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.rmi.RemoteException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -33,7 +34,6 @@ public class Game {
     private String[] chess;
     private Lock mu;
 
-    private GameCallBackInterface[] clients;
     private Lock gameLock;
 
     private HashMap<String, Player> playingPlayers;
@@ -52,6 +52,7 @@ public class Game {
 
     /**
      * check if the move is valid.
+     *
      * @param x the x position.
      * @param y the y position.
      * @return true if valid, false otherwise.
@@ -82,47 +83,31 @@ public class Game {
                 turnLabel = "Player " + winnerName + " wins!";
             }
             reRank();
-            List<String> failClients = new ArrayList<>();
+            LOGGER.info("Game finished");
             try {
-                clients[0].move(chess[turn], x, y, null, turnLabel);
-                clients[0].ask();
-            } catch (Exception e) {
-                failClients.add(players[0].getUsername());
-            }
-            try {
-                clients[1].move(chess[turn], x, y, null, turnLabel);
-                clients[1].ask();
-            } catch (Exception e) {
-                failClients.add(players[1].getUsername());
+                players[0].getClient().endGame(chess[turn], x, y, null, turnLabel);
+                players[1].getClient().endGame(chess[turn], x, y, null, turnLabel);
+            } catch (Exception ignored) {
             }
             gameLock.unlock();
-            if (!failClients.isEmpty()) {
-                throw new GameException(failClients.toArray(new String[0]));
-            }
             return;
         }
         turn = 1 - turn;
         timer = 20;
         turnLabel = getTurnLabel();
         String turnName = players[turn].getUsername();
-        List<String> failClients = new ArrayList<>();
         try {
-            clients[0].setTimer(timer, null);
-            clients[0].move(chess[1 - turn], x, y, turnName, turnLabel);
-        } catch (Exception e) {
-            failClients.add(players[0].getUsername());
-        }
-        try {
-            clients[1].setTimer(timer, null);
-            clients[1].move(chess[1 - turn], x, y, turnName, turnLabel);
-        } catch (Exception e) {
-            failClients.add(players[1].getUsername());
+            players[0].getClient().setTimer(timer, null);
+            players[0].getClient().move(chess[1 - turn], x, y, turnName, turnLabel);
+            players[1].getClient().setTimer(timer, null);
+            players[1].getClient().move(chess[1 - turn], x, y, turnName, turnLabel);
+        } catch (Exception ignored) {
         }
         gameLock.unlock();
-        if (!failClients.isEmpty()) {
-            throw new GameException(failClients.toArray(new String[0]));
-        }
+    }
 
+    public String getTurnUser() {
+        return players[turn].getUsername();
     }
 
     public String getTurnLabel() {
@@ -164,7 +149,7 @@ public class Game {
                 }
             }
         }
-        winner = -1;
+        winner = 2;
         return true;
     }
 
@@ -184,18 +169,73 @@ public class Game {
         gameLock.unlock();
         reRank();
         var turnLabel = "Player " + players[winner].getUsername() + " wins!";
-        try {
-            clients[winner].setLabel(turnLabel);
-        } catch (Exception e) {
-            LOGGER.info("Set label failed: " + e.getMessage());
-            throw new GameException(players[winner].getUsername());
-        }
 
         try {
-            clients[winner].ask();
-        } catch (Exception e) {
-            throw new GameException(players[winner].getUsername());
+            players[winner].getClient().endGame(null, -1, -1, null, turnLabel);
+        } catch (Exception ignored) {
         }
+    }
+
+    /**
+     * draw the game.
+     */
+    private void draw() {
+        gameLock.lock();
+        winner = 2;
+        gameLock.unlock();
+        mu.lock();
+        reRank();
+        mu.unlock();
+        var turnLabel = "Match Drawn";
+        try {
+            players[0].getClient().endGame(null, -1, -1, null, turnLabel);
+            players[1].getClient().endGame(null, -1, -1, null, turnLabel);
+        } catch (Exception ignored) {
+        }
+    }
+
+    public void heartbeat() {
+        new Thread(() -> {
+            int heartbeatElapsed = 0;
+            while (true) {
+                try {
+                    Thread.sleep(1000);
+                } catch (InterruptedException ignored) {
+                }
+                gameLock.lock();
+                if (finished()) {
+                    gameLock.unlock();
+                    return;
+                }
+                gameLock.unlock();
+                try {
+                    players[0].getClient().heartbeat();
+                    players[1].getClient().heartbeat();
+                    if (heartbeatElapsed > 0) {
+                        LOGGER.info("Heartbeat success");
+                        heartbeatElapsed = 0;
+                        players[0].getClient().setLabel(getTurnLabel(), true);
+                        players[1].getClient().setLabel(getTurnLabel(), true);
+                        players[0].getClient().continueGame(board, getTurnUser(), getTurnLabel());
+                        players[1].getClient().continueGame(board, getTurnUser(), getTurnLabel());
+                    }
+                } catch (Exception e) {
+                    try {
+                        players[0].getClient().setLabel("Opponent disconnected", true);
+                    } catch (RemoteException ignored) {
+                    }
+                    try {
+                        players[1].getClient().setLabel("Opponent disconnected", true);
+                    } catch (RemoteException ignored) {
+                    }
+                    heartbeatElapsed++;
+                    if (heartbeatElapsed > 30) {
+                        draw();
+                        return;
+                    }
+                }
+            }
+        }).start();
     }
 
     private void reRank() {
@@ -206,7 +246,7 @@ public class Game {
         players[1].setGame(null);
         playerList.remove(players[0]);
         playerList.remove(players[1]);
-        if (winner != -1) {
+        if (winner < 2 && winner >= 0) {
             players[winner].win();
             players[1 - winner].lose();
         } else {

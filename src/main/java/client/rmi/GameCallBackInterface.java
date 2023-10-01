@@ -33,12 +33,30 @@ public interface GameCallBackInterface extends Remote {
     void move(String chess, int x, int y, String turn, String label) throws RemoteException;
 
     /**
-     * set label.
+     * continue
      *
+     * @param board the board.
+     * @param turn  the turn.
      * @param label the label.
      * @throws RemoteException the remote exception.
      */
-    void setLabel(String label) throws RemoteException;
+    void continueGame(char[][] board, String turn, String label) throws RemoteException;
+
+    /**
+     * heartbeat.
+     *
+     * @throws RemoteException the remote exception.
+     */
+    void heartbeat() throws RemoteException;
+
+    /**
+     * set label.
+     *
+     * @param label      the label.
+     * @param resetTimer whether reset timer.
+     * @throws RemoteException the remote exception.
+     */
+    void setLabel(String label, boolean resetTimer) throws RemoteException;
 
     /**
      * send message.
@@ -49,11 +67,16 @@ public interface GameCallBackInterface extends Remote {
     void send(String message) throws RemoteException;
 
     /**
-     * ask for a rematch.
+     * end game.
      *
+     * @param chess the chess.
+     * @param x     the x coordinate.
+     * @param y     the y coordinate.
+     * @param turn  the turn.
+     * @param label the label.
      * @throws RemoteException the remote exception.
      */
-    void ask() throws RemoteException;
+    void endGame(String chess, int x, int y, String turn, String label) throws RemoteException;
 
     /**
      * set timer.

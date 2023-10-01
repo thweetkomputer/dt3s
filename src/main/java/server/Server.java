@@ -84,9 +84,7 @@ public class Server {
 
     private void startServices() {
         try {
-            LoginInterface loginService = new LoginImpl(players, playerList, freePlayers, playingPlayers, gameClients, lock);
-            registerService(loginService, "login");
-            GameInterface gameService = new GameImpl(players, playerList, freePlayers, playingPlayers, gameClients, lock);
+            GameInterface gameService = new GameImpl(players, playerList, freePlayers, playingPlayers, lock);
             registerService(gameService, "game");
         } catch (RemoteException | MalformedURLException e) {
             LOGGER.info("Server register service failed: " + e.getMessage());
