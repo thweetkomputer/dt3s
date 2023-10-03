@@ -132,6 +132,7 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
     @Override
     public void findGame(String username, GameCallBackInterface client) throws RemoteException {
         Player player = allPlayers.get(username);
+        LOGGER.info("Player " + username + " find game");
         lock.lock();
         if (player == null) {
             player = new Player(username, allPlayers.size() + 1, System.currentTimeMillis(), client);
@@ -142,9 +143,11 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
         }
         if (playingPlayers.containsKey(username)) {
             lock.unlock();
+            LOGGER.info("Player " + username + " is playing");
             return;
         }
         freePlayers.put(username, player);
+        LOGGER.info("Player " + username + " is free");
         if (freePlayers.size() > 1) {
             Player player1 = freePlayers.values().iterator().next();
             freePlayers.remove(player1.getUsername());
