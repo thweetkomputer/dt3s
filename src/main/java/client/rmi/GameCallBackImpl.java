@@ -10,6 +10,7 @@ import java.awt.*;
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.Lock;
 import java.util.logging.Logger;
@@ -150,12 +151,6 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
      * @param turn            the turn.
      */
     public void startTimer(long lastMessageTime, String turn) {
-//        if (!turn.equals(username)) {
-//            mu.lock();
-//            timerValue.setText("20");
-//            mu.unlock();
-//            return;
-//        }
         // start timer
         new Thread(() -> {
             var timer = 20;
@@ -165,26 +160,29 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
                 } catch (InterruptedException ignored) {
                 }
                 if (timer == 0) {
-                    // random choice
-                    java.util.List<Integer> available = new ArrayList<>();
-                    mu.lock();
-                    for (int i = 0; i < 9; ++i) {
-                        if (board[i].getText().isEmpty()) {
-                            available.add(i);
+                    System.out.printf("timeout, turn: %s\n", turn);
+                    if (turn.equals(username)) {
+                        // random choice
+                        List<Integer> available = new ArrayList<>();
+                        mu.lock();
+                        for (int i = 0; i < 9; ++i) {
+                            if (board[i].getText().isEmpty() || board[i].getText().equals(" ")) {
+                                available.add(i);
+                            }
                         }
-                    }
-                    mu.unlock();
-                    if (available.isEmpty()) {
-                        continue;
-                    }
-                    int random = (int) (Math.random() * available.size());
-                    int index = available.get(random);
-                    int x1 = index / 3;
-                    int y1 = index % 3;
-                    try {
-                        service.makeMove(username, x1, y1);
-                    } catch (Exception e) {
-                        LOGGER.info("Make move failed: " + e.getMessage());
+                        mu.unlock();
+                        if (available.isEmpty()) {
+                            continue;
+                        }
+                        int random = (int) (Math.random() * available.size());
+                        int index = available.get(random);
+                        int x1 = index / 3;
+                        int y1 = index % 3;
+                        try {
+                            service.makeMove(username, x1, y1);
+                        } catch (Exception e) {
+                            LOGGER.info("Make move failed: " + e.getMessage());
+                        }
                     }
                 }
                 try {
