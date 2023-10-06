@@ -150,12 +150,12 @@ public class GameCallBackImpl extends UnicastRemoteObject implements GameCallBac
      * @param turn            the turn.
      */
     public void startTimer(long lastMessageTime, String turn) {
-        if (!turn.equals(username)) {
-            mu.lock();
-            timerValue.setText("20");
-            mu.unlock();
-            return;
-        }
+//        if (!turn.equals(username)) {
+//            mu.lock();
+//            timerValue.setText("20");
+//            mu.unlock();
+//            return;
+//        }
         // start timer
         new Thread(() -> {
             var timer = 20;

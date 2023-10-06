@@ -3,6 +3,8 @@ CLIENT_JAR_NAME=client.jar
 
 build:
 	mvn clean package
+	mv target/$(SERVER_JAR_NAME) .
+	mv target/$(CLIENT_JAR_NAME) .
 run-server:
 	java -jar target/$(SERVER_JAR_NAME) 127.0.0.1 8888
 run-client:
