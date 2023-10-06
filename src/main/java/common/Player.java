@@ -12,14 +12,14 @@ import java.util.concurrent.locks.ReentrantLock;
  */
 @Data
 public class Player implements Comparable<Player> {
-    String username;
-    int rank;
-    int score;
-    long loginTime;
+    private String username;
+    private int rank;
+    private int score;
+    private long loginTime;
 
-    Game game;
-    Lock mu = new ReentrantLock();
-    GameCallBackInterface client;
+    private Game game;
+    private Lock mu = new ReentrantLock();
+    private GameCallBackInterface client;
 
     /**
      * the constructor.
@@ -40,10 +40,23 @@ public class Player implements Comparable<Player> {
     @Override
     public String toString() {
         if (username.length() > 10) {
-            return "Rank#" + rank + " " + username.substring(0, 7) + "...";
+            return "Rank#" + getRank() + " " + username.substring(0, 7) + "...";
         } else {
-            return "Rank#" + rank + " " + username;
+            return "Rank#" + getRank() + " " + username;
         }
+    }
+
+    public int getRank() {
+        mu.lock();
+        int ret = rank;
+        mu.unlock();
+        return ret;
+    }
+
+    public void setRank(int rank) {
+        mu.lock();
+        this.rank = rank;
+        mu.unlock();
     }
 
     /**

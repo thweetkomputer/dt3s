@@ -206,6 +206,8 @@ public class Game {
                     gameLock.unlock();
                     return;
                 }
+                var turnLabel = getTurnLabel();
+                var turnUser = getTurnUser();
                 gameLock.unlock();
                 try {
                     players[0].getClient().heartbeat();
@@ -213,10 +215,10 @@ public class Game {
                     if (heartbeatElapsed > 0) {
                         LOGGER.info("Heartbeat success");
                         heartbeatElapsed = 0;
-                        players[0].getClient().setLabel(getTurnLabel(), true);
-                        players[1].getClient().setLabel(getTurnLabel(), true);
-                        players[0].getClient().continueGame(board, getTurnUser(), getTurnLabel());
-                        players[1].getClient().continueGame(board, getTurnUser(), getTurnLabel());
+                        players[0].getClient().setLabel(turnLabel, true);
+                        players[1].getClient().setLabel(turnLabel, true);
+                        players[0].getClient().continueGame(board, turnUser, turnLabel);
+                        players[1].getClient().continueGame(board, turnUser, turnLabel);
                     }
                 } catch (Exception e) {
                     try {
@@ -256,7 +258,7 @@ public class Game {
         playerList.add(players[1]);
         int rank = 1;
         for (Player player : playerList) {
-            player.rank = rank++;
+            player.setRank(rank++);
         }
 
         mu.unlock();

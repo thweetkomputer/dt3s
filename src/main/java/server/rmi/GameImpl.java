@@ -217,9 +217,10 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
                 playerList, chess, lock, new ReentrantLock(), playingPlayers);
         player1.setGame(game);
         player2.setGame(game);
+        var turnLabel = game.getTurnLabel();
         lock.unlock();
         try {
-            player1.getClient().startGame(player2.getUsername(), players[turn].getUsername(), game.getTurnLabel());
+            player1.getClient().startGame(player2.getUsername(), players[turn].getUsername(), turnLabel);
         } catch (RemoteException e) {
             LOGGER.info("Start game for " + player1.getUsername() + " failed: " + e.getMessage());
             lock.lock();
@@ -230,7 +231,7 @@ public class GameImpl extends UnicastRemoteObject implements GameInterface {
             return;
         }
         try {
-            player2.getClient().startGame(player1.getUsername(), players[turn].getUsername(), game.getTurnLabel());
+            player2.getClient().startGame(player1.getUsername(), players[turn].getUsername(), turnLabel);
         } catch (RemoteException e) {
             LOGGER.info("Start game for " + player2.getUsername() + " failed: " + e.getMessage());
             lock.lock();
