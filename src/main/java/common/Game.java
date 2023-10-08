@@ -71,7 +71,7 @@ public class Game {
         String turnLabel;
         board[x][y] = chess[turn].charAt(0);
         if (finished()) {
-            if (winner == -1) {
+            if (winner == 2) {
                 turnLabel = "Match Drawn";
             } else {
                 String winnerName = players[winner].getUsername();
