@@ -5,8 +5,10 @@ build:
 	mvn clean package
 	mv target/$(SERVER_JAR_NAME) .
 	mv target/$(CLIENT_JAR_NAME) .
+.PHONY: run-server
 run-server:
 	java -jar target/$(SERVER_JAR_NAME) 127.0.0.1 8888
+.PHONY: run-client
 run-client:
 	java -jar target/$(CLIENT_JAR_NAME) $(id) 127.0.0.1 8888
 test1:
