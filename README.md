@@ -13,11 +13,11 @@ make build
 ### Server
 
 ```
-make run-server
+java -jar server.jar [ip] [port]
 ```
 
 ### Client
 
 ```
-make run-client id={your id}
+java -jar client.jar [player id] [ip] [port]
 ```
