@@ -1,6 +1,10 @@
 # Distributed Tic-Tac-Toe System (dt3s)
 
-It support users play tic-tac-toe game under a lan.
+Play a tic-tac-toe game under a lan with your friends!.
+
+Require java17+.
+
+<img width="812" alt="image" src="https://github.com/thweetkomputer/dt3s/assets/47818277/cbefcc0d-9dd8-4bb0-844d-bf8b6ffc9d41">
 
 ## Build
 
